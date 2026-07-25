@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>낙하공사 — 하늘에서 떨어지는 건물을 부수는 병맛 철거 게임</title>
+<meta property="og:title" content="낙하공사">
+<meta property="og:description" content="하늘에서 떨어지는 건물을 지면 도달 전에 부수는 병맛 철거 로그라이트">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#16333F; --asphalt:#23201C; --dust:#CFC7B6;
+  --hazard:#F2C230; --vest:#FF6A1A; --banner:#C0202C;
+  --line:rgba(207,199,182,.22);
+  --display:"Black Han Sans", ui-sans-serif, sans-serif;
+  --body:"IBM Plex Sans KR", ui-sans-serif, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--asphalt);color:var(--dust);font-family:var(--body)}
+body{display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 64px}
+#board{display:block;width:min(1280px,100vw - 32px);aspect-ratio:16/9;height:auto;
+  background:var(--sky);border:2px solid var(--hazard);cursor:crosshair}
+#lobby{width:min(1100px,100%)}
+
+.bar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+  padding-bottom:12px;border-bottom:3px solid var(--hazard)}
+.stamp{font-family:var(--display);font-size:clamp(34px,6vw,58px);line-height:.95;color:var(--hazard);
+  letter-spacing:-.01em}
+.ledger{display:grid;grid-template-columns:auto auto;gap:2px 14px;font-family:var(--mono);font-size:13px;text-align:right}
+.ledger .k{color:rgba(207,199,182,.55)}
+.ledger .v{color:var(--hazard);font-weight:700}
+
+.notice{margin:12px 0 26px;padding:9px 12px;border-left:4px solid var(--banner);
+  background:rgba(192,32,44,.09);font-size:13px;color:rgba(207,199,182,.8)}
+
+section{margin-bottom:30px}
+h2{font-family:var(--display);font-size:19px;font-weight:400;margin:0 0 12px;color:var(--dust)}
+h2 em{font-family:var(--body);font-style:normal;font-size:12px;color:rgba(207,199,182,.5)}
+
+.grid{display:grid;gap:10px}
+.classes{grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+.tree{grid-template-columns:repeat(3,1fr)}
+.traits{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+
+button{font:inherit;color:inherit;background:none;border:1px solid var(--line);
+  text-align:left;cursor:pointer;transition:border-color .12s,background .12s}
+button:hover:not(:disabled){border-color:var(--hazard)}
+button:focus-visible{outline:2px solid var(--vest);outline-offset:2px}
+button:disabled{cursor:not-allowed;opacity:.35}
+
+.card{padding:13px 14px;display:grid;gap:5px}
+.card b{font-size:15px}
+.card.on{border-color:var(--hazard);background:rgba(242,194,48,.10)}
+.card.locked b{color:rgba(207,199,182,.6)}
+.limit{font-size:11.5px;color:rgba(207,199,182,.6);line-height:1.45}
+
+.branch{border:1px solid var(--line);padding:8px}
+.bhead{font-family:var(--display);font-size:14px;color:var(--hazard);
+  padding:2px 4px 8px;border-bottom:1px dashed var(--line);margin-bottom:8px}
+.node{width:100%;padding:9px 10px;display:grid;gap:3px;margin-bottom:6px;border-style:dashed}
+.node b{font-size:13px}
+.node .d{font-size:11px;color:rgba(207,199,182,.6);line-height:1.4}
+.node.owned{border-style:solid}
+.node.on{border-color:var(--vest);background:rgba(255,106,26,.12)}
+
+.chip{padding:11px 12px;display:grid;gap:3px}
+.chip b{font-size:13px}
+.chip .d{font-size:11px;color:rgba(207,199,182,.6)}
+.chip.owned{border-color:var(--hazard);background:rgba(242,194,48,.08)}
+
+.price{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--hazard)}
+
+.go{display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+  padding-top:16px;border-top:3px solid var(--hazard)}
+.slotrow{display:flex;gap:8px;flex:1 1 320px;flex-wrap:wrap}
+.slot{flex:1 1 140px;padding:9px 11px;border:1px dashed var(--line);
+  font-size:12.5px;color:rgba(207,199,182,.45)}
+.slot.filled{border-style:solid;border-color:var(--vest);color:var(--dust)}
+.slot kbd{font-family:var(--mono);font-size:10px;background:var(--hazard);color:var(--asphalt);
+  padding:1px 5px;margin-right:7px;font-weight:700}
+.start{font-family:var(--display);font-size:26px;padding:11px 40px;
+  background:var(--hazard);color:var(--asphalt);border:none}
+.start:hover{background:var(--vest)}
+.hint{margin-top:14px;font-family:var(--mono);font-size:11.5px;color:rgba(207,199,182,.45)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:720px){.tree{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="lobby"></div>
+<canvas id="board" width="1280" height="720" hidden tabindex="0"></canvas>
+<script>
+// ══ logic/rng.js ══
+// 시드 PRNG. 같은 시드 -> 같은 수열. H-TEST 결정성 조건의 근거.
+function makeRng(seed) {
+  let a = seed >>> 0;
+  const next = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  return {
+    next,
+    int: (n) => Math.floor(next() * n),
+    pick: (arr) => arr[Math.floor(next() * arr.length)],
+    shuffle: (arr) => {
+      const out = arr.slice();
+      for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(next() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+      }
+      return out;
+    },
+  };
+}
+
+
+// ══ logic/waveConfig.js ══
+// 필드 상수 (1280x720 고정 캔버스)
+const FIELD = {
+  W: 1280, H: 720,
+  GROUND_Y: 660,
+  FLOOR_H: 48,
+  BUILDING_W: 110,
+  LANES: 11,
+  LANE_X: (i) => 40 + i * 112,
+};
+
+// ── 곡선 모델 ──────────────────────────────────────────────
+// 난이도는 fallSpeed나 층수가 아니라 "압박률"로 설계한다.
+//   압박률 = 웨이브 총 HP / (기준 플레이어가 그 웨이브 동안 낼 수 있는 클릭 수)
+//   1.0 = 기준 실력이 딱 감당 가능. 1.0을 넘으면 피해가 누적된다.
+// 이렇게 하면 층수·속도·수량을 따로 만지지 않고 난이도를 한 축으로 잡을 수 있다.
+const TUNE = {
+  refClickRate: 4, // 기준 플레이어 클릭 속도(회/초)
+
+  fallSpeedBase: 200,
+  fallSpeedGrowth: 1.035,
+
+  countBase: 1,
+  countPerWaves: 3,
+  countMax: 8,
+
+  floorsBase: 2,
+  floorsPerWaves: 4,
+  floorsMax: 7,
+
+  pressureBase: 0.55,
+  pressureGrowth: 0.05,
+  pressureMax: 2.2,
+
+  spawnStagger: 1.2,
+  intermission: 1.5,
+  hpFloorWeight: 0.5, // 위층이 무거워지는 정도 (아래가 낮고 위가 높다)
+  hpJitter: 0.22,     // 건물별 HP 편차 +-22%. 런마다 결과가 달라지게 하는 유일한 원천
+  bottomDestroyAccel: 1.4,
+  cityHpStart: 10,
+  minwonPainThreshold: 3,
+};
+
+function waveSpec(n) {
+  const fallSpeed = TUNE.fallSpeedBase * Math.pow(TUNE.fallSpeedGrowth, n - 1);
+  const count = Math.min(
+    TUNE.countBase + Math.floor((n - 1) / TUNE.countPerWaves),
+    TUNE.countMax, FIELD.LANES
+  );
+  const maxFloors = Math.min(
+    TUNE.floorsBase + Math.floor((n - 1) / TUNE.floorsPerWaves),
+    TUNE.floorsMax
+  );
+  const fallTime = FIELD.GROUND_Y / fallSpeed;
+  const duration = TUNE.spawnStagger * (count - 1) + fallTime;
+  const pressure = Math.min(
+    TUNE.pressureBase + TUNE.pressureGrowth * (n - 1),
+    TUNE.pressureMax
+  );
+  const totalHp = TUNE.refClickRate * duration * pressure;
+  return {
+    wave: n, fallSpeed, count, maxFloors, pressure,
+    totalHp, hpPerBuilding: totalHp / count,
+    stagger: TUNE.spawnStagger,
+  };
+}
+
+// 용도 태그는 총 HP를 바꾸지 않고 "형태"만 바꾼다.
+// 예산은 유지하면서 전술적 다양성만 얻는 방식.
+const USE_SHAPE = {
+  주거: { floorBias: 0, label: '아파트' },        // 기본형
+  상업: { floorBias: -1, label: '치킨집·노래방' }, // 낮고 두껍다
+  종교: { floorBias: +2, label: '교회 첨탑' },     // 높고 얇다 = 위에서 깎으면 오래 걸림
+  공공: { floorBias: -1, label: '주민센터' },      // 낮고 두껍다
+};
+
+// 목표 HP를 층에 배분한다. 아래층이 가볍고 위층이 무겁다.
+// -> 밑을 치면 빨리 줄지만 가속 페널티, 위를 치면 안전하지만 단단하다.
+function distributeHp(floorCount, hpTarget) {
+  const w = [];
+  for (let i = 0; i < floorCount; i++) w.push(1 + i * TUNE.hpFloorWeight);
+  const sum = w.reduce((a, c) => a + c, 0);
+  return w.map((x) => Math.max(1, Math.round((hpTarget * x) / sum)));
+}
+
+
+// ══ logic/building.js ══
+
+// 용도 태그. 무명행의 계열 필드 아이디어만 이식한 것 (내용은 무관).
+const USE_TAGS = ['주거', '상업', '종교', '공공'];
+
+function makeBuilding(id, lane, spec, rng) {
+  const use = rng.pick(USE_TAGS);
+  const bias = USE_SHAPE[use].floorBias;
+  const floorCount = Math.max(1, Math.min(1 + rng.int(spec.maxFloors) + bias, TUNE.floorsMax));
+  // 층수는 용도별로 다르지만 HP 총량은 웨이브 예산을 따른다 (층수가 적으면 층당 HP가 두껍다)
+  const jitter = 1 + (rng.next() * 2 - 1) * TUNE.hpJitter;
+  const floors = distributeHp(floorCount, spec.hpPerBuilding * jitter);
+  return {
+    id,
+    lane,
+    x: FIELD.LANE_X(lane),
+    use,
+    floors, // index 0 = 최하층
+    bottomY: 0, // 선행 엣지. 화면 최상단에서 출발
+    baseSpeed: spec.fallSpeed,
+    accel: 1, // 최하층 파괴 시 누적 가속
+    slowStacks: 0, // 부녀회장 소음
+    dots: [], // {dps, remain}
+    age: 0,
+    alive: true,
+  };
+}
+
+const totalHp = (b) => b.floors.reduce((a, c) => a + c, 0);
+const heightOf = (b) => b.floors.length * FIELD.FLOOR_H;
+const topY = (b) => b.bottomY - heightOf(b);
+
+function speedOf(b, globalSlow) {
+  const slow = (1 - 0.15 * Math.min(b.slowStacks, 5)) * globalSlow;
+  return b.baseSpeed * b.accel * Math.max(slow, 0.1);
+}
+
+function timeToGround(b, globalSlow) {
+  const v = speedOf(b, globalSlow);
+  return v <= 0 ? Infinity : (FIELD.GROUND_Y - b.bottomY) / v;
+}
+
+// 클릭 좌표 -> 층 index. 렌더 좌표계와 동일 식을 쓴다 (H-TEST 히트박스 조건).
+function floorAt(b, y) {
+  const idx = Math.floor((b.bottomY - y) / FIELD.FLOOR_H);
+  return idx >= 0 && idx < b.floors.length ? idx : -1;
+}
+
+// 층에 피해. 반환: 파괴된 층 수
+function damageFloor(b, idx, dmg) {
+  if (!b.alive || idx < 0 || idx >= b.floors.length) return 0;
+  b.floors[idx] -= dmg;
+  if (b.floors[idx] > 0) return 0;
+  const wasBottom = idx === 0;
+  b.floors.splice(idx, 1);
+  // 최하층이 사라지면 상층부는 분리되지 않고 통째로 가속 낙하한다.
+  if (wasBottom) b.accel *= TUNE.bottomDestroyAccel;
+  if (b.floors.length === 0) b.alive = false;
+  return 1;
+}
+
+
+// ══ logic/classes.js ══
+// 클래스 = 아키타입 1개 + 자연 제한 1개.
+// 기본 공격에는 쿨다운이 없다. 연사 속도는 플레이어의 클릭 속도 그 자체.
+// 각 클래스는 쿨다운이 아닌 서로 다른 종류의 천장을 갖는다.
+const CLASSES = {
+  chulgeo: {
+    id: 'chulgeo',
+    name: '철거반장 김두철',
+    kind: 'strike',
+    dmg: 1,
+    limit: '없음 — 순수 클릭 속도 (기준선)',
+  },
+  johap: {
+    id: 'johap',
+    name: '재개발 조합장',
+    kind: 'buyout', // 건물 즉시 소멸. 맨손 대체 공격 없음 = 자금이 곧 제한
+    fundsStart: 120,
+    fundsRegen: 9,
+    fundsMax: 300,
+    costPerHp: 4,      // 매입가 = 건물 총 HP x 8 (층수 과금이면 후반에 공짜가 됨)
+    refundPerFloor: 3,
+    limit: '자금 — 큰 건물일수록 사실상 긴 쿨다운',
+  },
+  dosa: {
+    id: 'dosa',
+    name: '무허가 도사',
+    kind: 'talisman', // 60% 폭발(지정층+아래층) / 20% 저주 / 20% 불발
+    boomDmg: 1,
+    dudChance: 0.28,
+    curseChance: 0.2,
+    curseDps: 1.0,
+    curseDur: 4,
+    limit: '불발 20% — 연타해도 5번에 1번은 날아감',
+  },
+  bunyeo: {
+    id: 'bunyeo',
+    name: '아파트 부녀회장',
+    kind: 'noise', // 스택당 DoT + 낙하 감속
+    dotDps: 0.35,
+    dotDur: 6,
+    slowMaxStacks: 5,
+    limit: '스택 상한 5 — 한 채에 몰아쳐도 천장이 있어 분산 강제',
+  },
+};
+
+const CLASS_IDS = Object.keys(CLASSES);
+
+
+// ══ logic/skills.js ══
+// 액티브 스킬 12종. 런 진입 시 3~4개 선택 -> 키 1~4.
+// effect(engine, ctx) 는 engine.js 가 주입한 헬퍼로만 상태를 만진다.
+const SKILLS = {
+  // ---- 파괴 ----
+  gangta: {
+    id: 'gangta', name: '강타', branch: '파괴', tier: 1, cd: 6, cost: 100, prereq: null,
+    desc: '지정 층 즉시 파괴',
+  },
+  pokyak: {
+    id: 'pokyak', name: '철거 폭약', branch: '파괴', tier: 2, cd: 12, cost: 200, prereq: 'gangta',
+    desc: '하단 3층에 피해 3',
+  },
+  drill: {
+    id: 'drill', name: '관통 드릴', branch: '파괴', tier: 3, cd: 18, cost: 400, prereq: 'pokyak',
+    desc: '1채 전층에 피해 2',
+  },
+  balpa: {
+    id: 'balpa', name: '광역 발파', branch: '파괴', tier: 4, cd: 40, cost: 800, prereq: 'drill',
+    desc: '화면 내 모든 건물 최하층 파괴',
+  },
+  // ---- 통제 ----
+  klaxon: {
+    id: 'klaxon', name: '감속 클랙슨', branch: '통제', tier: 1, cd: 15, cost: 100, prereq: null,
+    desc: '5초간 전체 낙하 -40%',
+  },
+  shield: {
+    id: 'shield', name: '지면 방어막', branch: '통제', tier: 2, cd: 20, cost: 200, prereq: 'klaxon',
+    desc: '다음 지면 접촉 1회 무효',
+  },
+  crane: {
+    id: 'crane', name: '견인 크레인', branch: '통제', tier: 3, cd: 18, cost: 400, prereq: 'shield',
+    desc: '건물 1채를 240px 위로 되돌림',
+  },
+  haengjeong: {
+    id: 'haengjeong', name: '행정 처분', branch: '통제', tier: 4, cd: 45, cost: 800, prereq: 'crane',
+    desc: '3초간 완전 정지',
+  },
+  // ---- 잡기술 ----
+  gomul: {
+    id: 'gomul', name: '고물상 호출', branch: '잡기술', tier: 1, cd: 25, cost: 100, prereq: null,
+    desc: '즉시 고철 +40',
+  },
+  chicken: {
+    id: 'chicken', name: '치킨 배달', branch: '잡기술', tier: 2, cd: 30, cost: 200, prereq: 'gomul',
+    charges: 2, desc: '도시 체력 +2 (런당 2회)',
+  },
+  minwon: {
+    id: 'minwon', name: '민원 반사', branch: '잡기술', tier: 3, cd: 30, cost: 400, prereq: 'chicken',
+    desc: '다음 접촉 1회를 민원 대신 고철로',
+  },
+  gakseong: {
+    id: 'gakseong', name: '무면허 각성', branch: '잡기술', tier: 4, cd: 50, cost: 800, prereq: 'minwon',
+    desc: '8초간 기본 공격 피해 2배',
+  },
+};
+
+const SKILL_IDS = Object.keys(SKILLS);
+
+// 영구 패시브 특성
+const TRAITS = {
+  wrist: { id: 'wrist', name: '숙련된 손목', cost: 150, desc: '기본 공격 피해 +20%' },
+  pocket: { id: 'pocket', name: '뒷주머니', cost: 150, desc: '시작 고철 +50' },
+  sorter: { id: 'sorter', name: '폐기물 감별사', cost: 300, desc: '아이템 드롭률 +30%' },
+  sturdy: { id: 'sturdy', name: '튼튼한 도시', cost: 400, desc: '도시 체력 +2' },
+  slot4: { id: 'slot4', name: '무면허 확장', cost: 1000, desc: '로드아웃 4번째 슬롯' },
+};
+
+
+// ══ logic/engine.js ══
+
+const DT = 1 / 60; // 고정 타임스텝. 결정성의 전제.
+
+function createRun({ seed, classId, skills = [], traits = [] }) {
+  const rng = makeRng(seed);
+  const cls = CLASSES[classId];
+  const has = (t) => traits.includes(t);
+  return {
+    rng, cls, skills, traits,
+    t: 0,
+    wave: 0,
+    phase: 'intermission',
+    phaseT: 0,
+    spawnQueue: [],
+    buildings: [],
+    nextId: 1,
+    cityHp: TUNE.cityHpStart + (has('sturdy') ? 2 : 0),
+    minwon: 0,
+    scrap: has('pocket') ? 50 : 0,
+    funds: cls.kind === 'buyout' ? cls.fundsStart : 0,
+    dmgMult: has('wrist') ? 1.2 : 1, // 숙련된 손목: 기본 공격 피해 +20%
+    skillCd: skills.map(() => 0),
+    skillCharges: skills.map((s) => SKILLS[s].charges ?? Infinity),
+    globalSlowUntil: 0,
+    freezeUntil: 0,
+    shield: 0,
+    minwonReflect: 0,
+    gakseongUntil: 0,
+    over: false,
+    // 통계
+    floorsDestroyed: 0,
+    wavesCleared: 0,
+    groundHits: 0,
+    skillUses: skills.map(() => 0),
+    attackAttempts: 0,
+  };
+}
+
+const globalSlowFactor = (r) => (r.t < r.globalSlowUntil ? 0.6 : 1);
+const frozen = (r) => r.t < r.freezeUntil;
+
+function startWave(r) {
+  r.wave += 1;
+  const spec = waveSpec(r.wave);
+  const lanes = r.rng.shuffle([...Array(FIELD.LANES).keys()]).slice(0, spec.count);
+  r.spawnQueue = lanes.map((lane, i) => ({ at: r.t + i * spec.stagger, lane, spec }));
+  r.phase = 'active';
+}
+
+function grantScrap(r, floors) {
+  r.scrap += floors * (1 + Math.floor(r.wave / 5));
+  if (r.cls.kind === 'buyout') r.funds = Math.min(r.funds + floors * r.cls.refundPerFloor, r.cls.fundsMax);
+}
+
+function onGroundHit(r, b) {
+  r.groundHits += 1;
+  if (r.shield > 0) { r.shield -= 1; return; }
+  if (r.minwonReflect > 0) { r.minwonReflect -= 1; r.scrap += 30; return; }
+  const extra = r.minwon >= TUNE.minwonPainThreshold ? 1 : 0;
+  r.cityHp -= b.floors.length + extra;
+  r.minwon += 1;
+  if (r.cityHp <= 0) { r.cityHp = 0; r.over = true; r.phase = 'over'; }
+}
+
+function step(r) {
+  if (r.over) return;
+  r.t += DT;
+
+  // 1. 스폰
+  while (r.spawnQueue.length && r.spawnQueue[0].at <= r.t) {
+    const q = r.spawnQueue.shift();
+    r.buildings.push(makeBuilding(r.nextId++, q.lane, q.spec, r.rng));
+  }
+
+  // 2. 낙하 + DoT
+  const gs = globalSlowFactor(r);
+  const still = frozen(r);
+  for (const b of r.buildings) {
+    b.age += DT;
+    if (!still) b.bottomY += speedOf(b, gs) * DT;
+    for (const d of b.dots) {
+      d.remain -= DT;
+      const killed = damageFloor(b, 0, d.dps * DT);
+      if (killed) { r.floorsDestroyed += killed; grantScrap(r, killed); }
+    }
+    b.dots = b.dots.filter((d) => d.remain > 0 && b.alive);
+  }
+
+  // 3. 지면 접촉 / 파괴 정리
+  for (const b of r.buildings) {
+    if (b.alive && b.bottomY >= FIELD.GROUND_Y) { onGroundHit(r, b); b.alive = false; }
+  }
+  r.buildings = r.buildings.filter((b) => b.alive);
+  if (r.over) return;
+
+  // 4. 쿨다운
+  for (let i = 0; i < r.skillCd.length; i++) if (r.skillCd[i] > 0) r.skillCd[i] -= DT;
+  if (r.cls.kind === 'buyout') {
+    r.funds = Math.min(r.funds + r.cls.fundsRegen * DT, r.cls.fundsMax);
+  }
+
+  // 5. 웨이브 전환
+  if (r.phase === 'active' && r.spawnQueue.length === 0 && r.buildings.length === 0) {
+    r.wavesCleared = r.wave;
+    r.phase = 'intermission';
+    r.phaseT = r.t + TUNE.intermission;
+  } else if (r.phase === 'intermission' && r.t >= r.phaseT) {
+    startWave(r);
+  }
+}
+
+// ---------- 액션 (봇/플레이어 공용 입구) ----------
+
+function basicAttack(r, buildingId, floorIdx) {
+  if (r.over) return false;
+  const b = r.buildings.find((x) => x.id === buildingId);
+  if (!b || !b.alive) return false;
+  const c = r.cls;
+  const mult = r.dmgMult * (r.t < r.gakseongUntil ? 2 : 1); // 무면허 각성: 피해 2배
+  let killed = 0;
+
+  if (c.kind === 'strike') {
+    killed = damageFloor(b, floorIdx, c.dmg * mult);
+
+  } else if (c.kind === 'buyout') {
+    // 자금이 곧 제한. 못 사면 클릭 자체가 성립하지 않는다 (맨손 없음).
+    const price = totalHp(b) * c.costPerHp;
+    if (r.funds < price) return false;
+    r.funds -= price;
+    killed = b.floors.length;
+    b.floors.length = 0;
+    b.alive = false;
+
+  } else if (c.kind === 'talisman') {
+    const roll = r.rng.next();
+    if (roll < c.dudChance) {
+      /* 불발 — 클릭은 소모된다 */
+    } else if (roll < c.dudChance + c.curseChance) {
+      addDot(b, 'curse', c.curseDps * mult, c.curseDur);
+    } else {
+      killed += damageFloor(b, floorIdx, c.boomDmg * mult);
+      killed += damageFloor(b, Math.min(floorIdx, b.floors.length - 1), c.boomDmg * mult);
+    }
+
+  } else if (c.kind === 'noise') {
+    // 스택 만렙 건물에는 더 쌓을 수 없다 -> 분산 강제
+    if (b.slowStacks >= c.slowMaxStacks) return false;
+    b.slowStacks += 1;
+    addDot(b, 'noise', c.dotDps * b.slowStacks * mult, c.dotDur);
+  }
+
+  r.attackAttempts += 1;
+  if (killed) { r.floorsDestroyed += killed; grantScrap(r, killed); }
+  return true;
+}
+
+// 태그가 같은 DoT는 중첩되지 않고 갱신된다 (연타로 DoT를 무한 적층하는 구멍 차단)
+function addDot(b, tag, dps, dur) {
+  const cur = b.dots.find((d) => d.tag === tag);
+  if (cur) { cur.dps = Math.max(cur.dps, dps); cur.remain = dur; }
+  else b.dots.push({ tag, dps, remain: dur });
+}
+
+function useSkill(r, slot, targetId = null) {
+  if (r.over || slot >= r.skills.length) return false;
+  if (r.skillCd[slot] > 0 || r.skillCharges[slot] <= 0) return false;
+  const id = r.skills[slot];
+  const s = SKILLS[id];
+  const target = targetId != null ? r.buildings.find((b) => b.id === targetId) : null;
+  let killed = 0;
+
+  switch (id) {
+    case 'gangta':
+      if (!target) return false;
+      killed = damageFloor(target, target.floors.length - 1, 999);
+      break;
+    case 'pokyak':
+      if (!target) return false;
+      for (let i = Math.min(2, target.floors.length - 1); i >= 0; i--) killed += damageFloor(target, i, 3);
+      break;
+    case 'drill':
+      if (!target) return false;
+      for (let i = target.floors.length - 1; i >= 0; i--) killed += damageFloor(target, i, 2);
+      break;
+    case 'balpa':
+      for (const b of r.buildings) killed += damageFloor(b, 0, 999);
+      break;
+    case 'klaxon': r.globalSlowUntil = r.t + 5; break;
+    case 'shield': r.shield += 1; break;
+    case 'crane':
+      if (!target) return false;
+      target.bottomY = Math.max(target.bottomY - 240, heightOf(target));
+      break;
+    case 'haengjeong': r.freezeUntil = r.t + 3; break;
+    case 'gomul': r.scrap += 40; break;
+    case 'chicken': r.cityHp += 2; break;
+    case 'minwon': r.minwonReflect += 1; break;
+    case 'gakseong': r.gakseongUntil = r.t + 8; break;
+    default: return false;
+  }
+
+  r.buildings = r.buildings.filter((b) => b.alive);
+  if (killed) { r.floorsDestroyed += killed; grantScrap(r, killed); }
+  r.skillCd[slot] = s.cd;
+  if (r.skillCharges[slot] !== Infinity) r.skillCharges[slot] -= 1;
+  r.skillUses[slot] += 1;
+  return true;
+}
+
+
+
+// ══ render/game.js ══
+
+// ── 메타 진행 (세션 메모리) ───────────────────────────────
+// GitHub Pages 배포 시 이 객체만 localStorage에 저장하면 영구 진행이 된다.
+const meta = {
+  scrap: 0,
+  classes: new Set(['chulgeo']),
+  skills: new Set(),
+  traits: new Set(),
+  best: 0,
+};
+const CLASS_COST = { johap: 300, dosa: 600, bunyeo: 900 };
+
+let screen = 'lobby';
+let pickedClass = 'chulgeo';
+let loadout = [];
+let run = null;
+let paused = false;
+let lastResult = null;
+const slots = () => (meta.traits.has('slot4') ? 4 : 3);
+
+// ── DOM ──────────────────────────────────────────────────
+const $ = (s) => document.querySelector(s);
+const lobby = $('#lobby');
+const canvas = $('#board');
+const ctx = canvas.getContext('2d');
+
+// ── 로비 ─────────────────────────────────────────────────
+function canBuy(cost) { return meta.scrap >= cost; }
+
+function buy(kind, id, cost) {
+  if (!canBuy(cost)) return;
+  meta.scrap -= cost;
+  if (kind === 'class') meta.classes.add(id);
+  if (kind === 'skill') meta.skills.add(id);
+  if (kind === 'trait') meta.traits.add(id);
+  renderLobby();
+}
+
+function toggleSkill(id) {
+  if (!meta.skills.has(id)) return;
+  const i = loadout.indexOf(id);
+  if (i >= 0) loadout.splice(i, 1);
+  else if (loadout.length < slots()) loadout.push(id);
+  renderLobby();
+}
+
+function skillLocked(id) {
+  const s = SKILLS[id];
+  return s.prereq ? !meta.skills.has(s.prereq) : false;
+}
+
+function renderLobby() {
+  loadout = loadout.filter((id) => meta.skills.has(id)).slice(0, slots());
+  if (!meta.classes.has(pickedClass)) pickedClass = 'chulgeo';
+
+  const branches = ['파괴', '통제', '잡기술'];
+  lobby.innerHTML = `
+    <header class="bar">
+      <div class="stamp">낙하공사</div>
+      <div class="ledger">
+        <span class="k">보유 고철</span><span class="v">${meta.scrap}</span>
+        <span class="k">최고 기록</span><span class="v">${meta.best}웨이브</span>
+      </div>
+    </header>
+
+    <p class="notice">본 철거는 관계 법령에 따라 진행되지 않습니다. 건물 내부는 전부 공가입니다.</p>
+
+    <section>
+      <h2>1. 철거 담당</h2>
+      <div class="grid classes">
+        ${CLASS_IDS.map((id) => {
+          const c = CLASSES[id];
+          const owned = meta.classes.has(id);
+          const cost = CLASS_COST[id];
+          return `<button class="card ${pickedClass === id ? 'on' : ''} ${owned ? '' : 'locked'}"
+            data-act="${owned ? 'pick' : 'buyclass'}" data-id="${id}">
+            <b>${c.name}</b>
+            <span class="limit">제한 · ${c.limit}</span>
+            ${owned ? '' : `<span class="price">고철 ${cost}</span>`}
+          </button>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 기술 습득 <em>· 하위 기술을 먼저 배워야 합니다</em></h2>
+      <div class="grid tree">
+        ${branches.map((br) => `
+          <div class="branch">
+            <div class="bhead">${br}</div>
+            ${SKILL_IDS.filter((id) => SKILLS[id].branch === br).map((id) => {
+              const s = SKILLS[id];
+              const owned = meta.skills.has(id);
+              const lock = skillLocked(id);
+              const on = loadout.includes(id);
+              return `<button class="node ${owned ? 'owned' : ''} ${on ? 'on' : ''} ${lock ? 'locked' : ''}"
+                data-act="${owned ? 'toggle' : 'buyskill'}" data-id="${id}" ${lock ? 'disabled' : ''}>
+                <b>${s.name}</b>
+                <span class="d">${s.desc}</span>
+                <span class="price">${owned ? (on ? '편성됨' : '미편성') : `고철 ${s.cost}`}</span>
+              </button>`;
+            }).join('')}
+          </div>`).join('')}
+      </div>
+    </section>
+
+    <section>
+      <h2>3. 특성 <em>· 영구 적용</em></h2>
+      <div class="grid traits">
+        ${Object.values(TRAITS).map((t) => {
+          const owned = meta.traits.has(t.id);
+          return `<button class="chip ${owned ? 'owned' : ''}" data-act="buytrait" data-id="${t.id}">
+            <b>${t.name}</b><span class="d">${t.desc}</span>
+            <span class="price">${owned ? '적용중' : `고철 ${t.cost}`}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <footer class="go">
+      <div class="slotrow">
+        ${Array.from({ length: slots() }, (_, i) => {
+          const id = loadout[i];
+          return `<div class="slot ${id ? 'filled' : ''}"><kbd>${i + 1}</kbd>${id ? SKILLS[id].name : '비어 있음'}</div>`;
+        }).join('')}
+      </div>
+      <button class="start" data-act="start">착공</button>
+    </footer>
+    <p class="hint">좌클릭으로 층을 때립니다 · 숫자키로 기술 사용 · Space 일시정지 · Esc 철수</p>
+  `;
+}
+
+lobby.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const { act, id } = b.dataset;
+  if (act === 'pick') { pickedClass = id; renderLobby(); }
+  if (act === 'buyclass') buy('class', id, CLASS_COST[id]);
+  if (act === 'buyskill') buy('skill', id, SKILLS[id].cost);
+  if (act === 'buytrait') buy('trait', id, TRAITS[id].cost);
+  if (act === 'toggle') toggleSkill(id);
+  if (act === 'start') startRun();
+});
+
+// ── 런 ───────────────────────────────────────────────────
+function startRun() {
+  run = createRun({ seed: (Math.random() * 1e9) | 0, classId: pickedClass, skills: loadout.slice(), traits: [...meta.traits] });
+  screen = 'run';
+  paused = false;
+  lobby.hidden = true;
+  canvas.hidden = false;
+  canvas.focus();
+}
+
+function endRun() {
+  meta.scrap += run.scrap;
+  meta.best = Math.max(meta.best, run.wavesCleared);
+  lastResult = { waves: run.wavesCleared, scrap: run.scrap, floors: run.floorsDestroyed, mins: run.t / 60 };
+  screen = 'result';
+}
+
+function backToLobby() {
+  screen = 'lobby';
+  run = null;
+  canvas.hidden = true;
+  lobby.hidden = false;
+  renderLobby();
+}
+
+// 입력
+canvas.addEventListener('mousedown', (e) => {
+  if (screen === 'result') { backToLobby(); return; }
+  if (screen !== 'run' || paused || !run) return;
+  const r = canvas.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * FIELD.W;
+  const y = ((e.clientY - r.top) / r.height) * FIELD.H;
+  for (const b of run.buildings) {
+    if (x < b.x || x > b.x + FIELD.BUILDING_W) continue;
+    const idx = floorAt(b, y);
+    if (idx >= 0) { basicAttack(run, b.id, idx); return; }
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (screen !== 'run' || !run) return;
+  if (e.code === 'Space') { paused = !paused; e.preventDefault(); return; }
+  if (e.code === 'Escape') { endRun(); return; }
+  const n = Number(e.key);
+  if (n >= 1 && n <= run.skills.length && !paused) {
+    // 대상이 필요한 기술은 가장 위협적인 건물에 걸린다
+    const gs = globalSlowFactor(run);
+    const t = run.buildings.slice().sort((a, z) => timeToGround(a, gs) - timeToGround(z, gs))[0];
+    useSkill(run, n - 1, t ? t.id : null);
+  }
+});
+window.addEventListener('blur', () => { if (screen === 'run') paused = true; }); // 포커스 상실 시 자동 일시정지
+
+// ── 렌더 ─────────────────────────────────────────────────
+const C = {
+  sky: '#16333F', grid: 'rgba(126,196,214,.14)', asphalt: '#23201C',
+  dust: '#CFC7B6', hazard: '#F2C230', vest: '#FF6A1A', banner: '#C0202C',
+};
+
+function drawSky() {
+  ctx.fillStyle = C.sky;
+  ctx.fillRect(0, 0, FIELD.W, FIELD.H);
+  // 청사진 격자 — 건물은 도면에서 떨어진다
+  ctx.strokeStyle = C.grid;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x <= FIELD.W; x += 40) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, FIELD.GROUND_Y); }
+  for (let y = 0; y <= FIELD.GROUND_Y; y += 40) { ctx.moveTo(0, y + .5); ctx.lineTo(FIELD.W, y + .5); }
+  ctx.stroke();
+  // 레인 표시
+  ctx.strokeStyle = 'rgba(242,194,48,.10)';
+  ctx.beginPath();
+  for (let i = 0; i < FIELD.LANES; i++) {
+    const x = FIELD.LANE_X(i) + FIELD.BUILDING_W / 2;
+    ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, FIELD.GROUND_Y);
+  }
+  ctx.stroke();
+}
+
+function drawGround() {
+  const gy = FIELD.GROUND_Y;
+  ctx.fillStyle = C.asphalt;
+  ctx.fillRect(0, gy, FIELD.W, FIELD.H - gy);
+  // 안전 경고 스트라이프
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, gy, FIELD.W, 12); ctx.clip();
+  ctx.fillStyle = C.hazard; ctx.fillRect(0, gy, FIELD.W, 12);
+  ctx.fillStyle = C.asphalt;
+  for (let x = -24; x < FIELD.W + 24; x += 24) {
+    ctx.beginPath();
+    ctx.moveTo(x, gy + 12); ctx.lineTo(x + 12, gy); ctx.lineTo(x + 24, gy); ctx.lineTo(x + 12, gy + 12);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawBuilding(b) {
+  const w = FIELD.BUILDING_W;
+  for (let i = 0; i < b.floors.length; i++) {
+    const top = b.bottomY - (i + 1) * FIELD.FLOOR_H;
+    const hp = b.floors[i];
+    ctx.fillStyle = i === 0 ? 'rgba(255,106,26,.16)' : 'rgba(207,199,182,.10)';
+    ctx.fillRect(b.x, top, w, FIELD.FLOOR_H - 2);
+    ctx.strokeStyle = i === 0 ? C.vest : C.dust;
+    ctx.lineWidth = i === 0 ? 2 : 1;
+    ctx.strokeRect(b.x + .5, top + .5, w - 1, FIELD.FLOOR_H - 3);
+    // 층 HP를 도면 치수처럼 표기
+    ctx.fillStyle = C.dust;
+    ctx.font = '600 13px ui-monospace, monospace';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(Math.ceil(hp), b.x + w - 8, top + FIELD.FLOOR_H / 2 - 1);
+  }
+  // 용도 라벨
+  ctx.fillStyle = 'rgba(207,199,182,.65)';
+  ctx.font = '11px ui-sans-serif, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(USE_SHAPE[b.use].label, b.x + 2, b.bottomY - heightOf(b) - 9);
+  // 상태 표시
+  if (b.slowStacks) {
+    ctx.fillStyle = C.hazard;
+    for (let s = 0; s < b.slowStacks; s++) ctx.fillRect(b.x + 4 + s * 7, b.bottomY - 7, 5, 4);
+  }
+  if (b.accel > 1) {
+    ctx.fillStyle = C.banner;
+    ctx.font = '700 11px ui-monospace, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('가속 ×' + b.accel.toFixed(1), b.x + 2, b.bottomY + 12);
+  }
+}
+
+function drawHud() {
+  const r = run;
+  const spec = waveSpec(Math.max(r.wave, 1));
+  ctx.fillStyle = 'rgba(35,32,28,.86)';
+  ctx.fillRect(0, 0, FIELD.W, 46);
+  ctx.strokeStyle = C.hazard; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 46.5); ctx.lineTo(FIELD.W, 46.5); ctx.stroke();
+
+  const cell = (x, k, v, color) => {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(207,199,182,.55)';
+    ctx.font = '10px ui-sans-serif, sans-serif';
+    ctx.fillText(k, x, 18);
+    ctx.fillStyle = color || C.dust;
+    ctx.font = '700 19px ui-monospace, monospace';
+    ctx.fillText(v, x, 38);
+  };
+  cell(20, '웨이브', String(r.wave));
+  cell(110, '도시 체력', String(r.cityHp), r.cityHp <= 3 ? C.banner : C.dust);
+  cell(230, '고철', String(r.scrap), C.hazard);
+  cell(330, '민원', String(r.minwon), r.minwon >= TUNE.minwonPainThreshold ? C.vest : C.dust);
+  cell(420, '하중률', spec.pressure.toFixed(2), spec.pressure >= 1 ? C.vest : C.dust);
+  if (r.cls.kind === 'buyout') cell(520, '자금', String(Math.floor(r.funds)), C.hazard);
+
+  // 기술 슬롯
+  let x = FIELD.W - 20;
+  ctx.textAlign = 'right';
+  for (let i = r.skills.length - 1; i >= 0; i--) {
+    const s = SKILLS[r.skills[i]];
+    const cd = r.skillCd[i];
+    const ready = cd <= 0 && r.skillCharges[i] > 0;
+    ctx.fillStyle = ready ? C.hazard : 'rgba(207,199,182,.30)';
+    ctx.font = '700 13px ui-sans-serif, sans-serif';
+    ctx.fillText(`${i + 1} ${s.name}${ready ? '' : ` ${Math.max(0, cd).toFixed(1)}s`}`, x, 30);
+    x -= ctx.measureText(`${i + 1} ${s.name}   `).width + 14;
+  }
+}
+
+function overlay(title, lines, foot) {
+  ctx.fillStyle = 'rgba(22,51,63,.92)';
+  ctx.fillRect(0, 0, FIELD.W, FIELD.H);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.hazard;
+  ctx.font = '700 58px "Black Han Sans", ui-sans-serif, sans-serif';
+  ctx.fillText(title, FIELD.W / 2, 250);
+  ctx.fillStyle = C.dust;
+  ctx.font = '17px ui-sans-serif, sans-serif';
+  lines.forEach((l, i) => ctx.fillText(l, FIELD.W / 2, 310 + i * 30));
+  if (foot) {
+    ctx.fillStyle = 'rgba(207,199,182,.6)';
+    ctx.font = '14px ui-sans-serif, sans-serif';
+    ctx.fillText(foot, FIELD.W / 2, 470);
+  }
+}
+
+function frame() {
+  requestAnimationFrame(frame);
+  if (screen === 'lobby') return;
+
+  if (screen === 'run' && !paused) {
+    step(run);
+    if (run.over) endRun();
+  }
+
+  drawSky();
+  if (run) for (const b of run.buildings) drawBuilding(b);
+  drawGround();
+  if (run && screen === 'run') drawHud();
+
+  if (paused && screen === 'run') overlay('일시정지', ['Space를 눌러 재개'], '');
+  if (screen === 'result') {
+    overlay('철거 중단', [
+      `${lastResult.waves}웨이브 · ${lastResult.floors}개 층 · ${lastResult.mins.toFixed(1)}분`,
+      `고철 ${lastResult.scrap} 획득`,
+    ], '아무 곳이나 클릭하면 사무실로 돌아갑니다');
+  }
+}
+
+renderLobby();
+frame();
+
+</script>
+</body>
+</html>
