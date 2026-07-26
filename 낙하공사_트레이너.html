@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>낙하공사 — 하늘에서 떨어지는 건물을 부수는 병맛 철거 게임</title>
+<meta property="og:title" content="낙하공사">
+<meta property="og:description" content="하늘에서 떨어지는 건물을 지면 도달 전에 베어내는 병맛 철거 액션">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--sky:#16333F;--asphalt:#23201C;--dust:#CFC7B6;--hazard:#F2C230;--vest:#FF6A1A;--banner:#C0202C;
+--line:rgba(207,199,182,.22);--display:"Black Han Sans",ui-sans-serif,sans-serif;
+--body:"IBM Plex Sans KR",ui-sans-serif,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--asphalt);color:var(--dust);font-family:var(--body)}
+body{display:flex;justify-content:center;padding:24px 16px 64px}
+#board{display:block;width:min(1200px,100vw - 32px);aspect-ratio:4/3;height:auto;
+background:var(--sky);border:2px solid var(--hazard);outline:none}
+#lobby{width:min(1100px,100%)}
+.bar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:3px solid var(--hazard)}
+.stamp{font-family:var(--display);font-size:clamp(34px,6vw,58px);line-height:.95;color:var(--hazard)}
+.ledger{display:grid;grid-template-columns:auto auto;gap:2px 14px;font-family:var(--mono);font-size:13px;text-align:right}
+.ledger .k{color:rgba(207,199,182,.55)}.ledger .v{color:var(--hazard);font-weight:700}
+.notice{margin:12px 0 26px;padding:9px 12px;border-left:4px solid var(--banner);
+background:rgba(192,32,44,.09);font-size:13px;color:rgba(207,199,182,.8)}
+section{margin-bottom:28px}
+h2{font-family:var(--display);font-size:19px;font-weight:400;margin:0 0 12px}
+h2 em{font-family:var(--body);font-style:normal;font-size:12px;color:rgba(207,199,182,.5)}
+.grid{display:grid;gap:10px}
+.classes{grid-template-columns:repeat(auto-fit,minmax(238px,1fr))}
+.tree{grid-template-columns:repeat(4,1fr)}
+.traits{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+button{font:inherit;color:inherit;background:none;border:1px solid var(--line);text-align:left;cursor:pointer;
+transition:border-color .12s,background .12s}
+button:hover:not(:disabled){border-color:var(--hazard)}
+button:focus-visible{outline:2px solid var(--vest);outline-offset:2px}
+button:disabled{cursor:not-allowed;opacity:.32}
+.card{padding:13px 14px;display:grid;gap:4px}
+.card b{font-size:15px}.card .w{font-family:var(--mono);font-size:11px;color:var(--hazard)}
+.card.on{border-color:var(--hazard);background:rgba(242,194,48,.10)}
+.lim{font-size:11.5px;color:rgba(207,199,182,.6);line-height:1.45}
+.how{font-size:11.5px;color:var(--dust);line-height:1.5;padding:6px 8px;
+background:rgba(242,194,48,.07);border-left:2px solid var(--hazard)}
+.tip{font-size:11px;color:rgba(207,199,182,.52);line-height:1.4;font-style:italic}
+.branch{border:1px solid var(--line);padding:8px}
+.bh{font-family:var(--display);font-size:14px;color:var(--hazard);padding:2px 4px 8px;
+border-bottom:1px dashed var(--line);margin-bottom:8px}
+.node{width:100%;padding:9px 10px;display:grid;gap:3px;margin-bottom:6px;border-style:dashed}
+.node b{font-size:12.5px}.node .d{font-size:10.5px;color:rgba(207,199,182,.6);line-height:1.4}
+.node.own{border-style:solid}
+.node.on{border-color:var(--vest);background:rgba(255,106,26,.12)}
+.chip{padding:11px 12px;display:grid;gap:3px}
+.chip b{font-size:13px}.chip .d{font-size:11px;color:rgba(207,199,182,.6)}
+.chip.own{border-color:var(--hazard);background:rgba(242,194,48,.08)}
+.price{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--hazard)}
+.go{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding-top:16px;border-top:3px solid var(--hazard)}
+.slotrow{display:flex;gap:8px;flex:1 1 320px;flex-wrap:wrap}
+.slot{flex:1 1 130px;padding:9px 11px;border:1px dashed var(--line);font-size:12.5px;color:rgba(207,199,182,.45)}
+.slot.f{border-style:solid;border-color:var(--vest);color:var(--dust)}
+.start{font-family:var(--display);font-size:26px;padding:11px 40px;background:var(--hazard);color:var(--asphalt);border:none}
+.start:hover{background:var(--vest)}
+.hint{margin:12px 0 0;font-family:var(--mono);font-size:11.5px;color:rgba(207,199,182,.45)}
+.hint b{color:var(--hazard)}
+table.cmd{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}
+table.cmd td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.cmd td:first-child{white-space:nowrap;width:1%;color:var(--hazard)}
+table.cmd td:nth-child(2){white-space:nowrap;width:1%;font-weight:700}
+table.cmd td:last-child{color:rgba(207,199,182,.62)}
+table.cmd small{color:rgba(207,199,182,.45)}
+kbd{font-family:var(--mono);font-size:11px;background:var(--hazard);color:var(--asphalt);
+padding:2px 6px;margin-right:3px;font-weight:700;border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:820px){.tree{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<div id="lobby"></div>
+<canvas id="board" width="1200" height="720" hidden tabindex="0"></canvas>
+<script>
+// ══ logic/rng.js ══
+// 시드 PRNG. 같은 시드 -> 같은 수열.
+function makeRng(seed) {
+  let a = seed >>> 0;
+  const next = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  return { next, int: (n) => Math.floor(next() * n), pick: (a2) => a2[Math.floor(next() * a2.length)] };
+}
+
+
+// ══ logic/tune.js ══
+const FIELD = { W: 1200, H: 720, GROUND_Y: 620, FLOOR_H: 44, POS: 3, POS_X: [350, 600, 850], CELL_W: 250 };
+
+// ── 코어 모델 ────────────────────────────────────────────
+// 가드 게이지로 시간을 산다.
+// 건물이 지면에 닿는 순간에만 가드 판정 -> 공중이면 점프가드(콤보 유지), 지면이면 지면가드(콤보 끊김).
+// 압박률 = 건물 총 필요타수 / (기본 낙하시간 + 게이지로 벌 수 있는 시간) x 공격속도
+const TUNE = {
+  fallBase: 62, fallGrowth: 1.026, fallMax: 250,
+  floorsBase: 3, floorsPer: 5, floorsMax: 12,
+  hardShift: 0.03,       // 건물 번호가 오를수록 고HP 셀 비중 증가
+
+  attackCd: 0.15,
+  attackPush: 7,         // 명중 시 건물을 밀어올리는 양(px)
+  jumpGuardPush: 84,
+  groundGuardPush: 30,
+
+  bladeSlack: 34,       // 칼날 좌우 여유. 구멍이 뚫린 뒤에도 옆 부재가 걸린다
+  bladeDown: 1.2,       // 칼날 아래 여유(층). 점프 중 물체가 아래로 지나가는 것을 막는다
+  jumpDur: 0.40, jumpHeight: 96, playerH: 46,
+
+  guardMax: 100, guardDrain: 30, guardOnHit: 11, guardRegen: 40, guardMinToHold: 8,
+  wipeRatio: 0.6,       // 전멸형 필살기가 치우는 비율. 1.0이면 자동 클리어가 된다
+  specialMax: 100, specialBase: 2, specialPerCombo: 0.16, specialCap: 10,
+  // 커맨드 체계
+  chainWindow: 0.45,    // 3단 콤보 입력 유효 시간
+  chargeMin: 0.25,      // 이 시간 이상 홀드해야 차지 성립
+  chargeFull: 0.9,
+  justWindow: 0.09,     // 저스트 가드 판정창 (약 5프레임)
+  justScore: 120, justComboBonus: 2,
+  justCharge: 9,        // 저스트 가드 보상. 26이면 이것만으로 게이지가 차 공격이 무의미해진다
+  // 가드는 시간을 '거리'로 사지 않고 '정지'로 산다.
+  // 밀어올리면 물체가 리치 밖으로 나가 공격이 무의미해진다.
+  jumpHover: 1.5, groundHover: 0.4, justHover: 1.7,
+  justPush: 120,
+  diveAccel: 2.4,       // 내려찍기 낙하 배속
+
+  // 하중 구조
+  moveSpeed: 600,       // 연속 이동 속도(px/s). 이동 비용은 경직이 아니라 실제 이동 거리다
+  moveSlowOnAttack: 0.35, // 공격 경직 중 이동 감속
+  dashDist: 165,
+  toppleDanger: 130,    // 붕괴 방향으로 이 거리 안쪽이면 깔린다
+  centerHpBonus: 1,     // 중앙은 기둥이라 단단하다. 없으면 중앙만 때리는 것이 최적해가 된다
+  tiltLimit: 0.40,      // 질량 게이트와 함께 작동. 의도적으로 몰아쳐야 도달한다      // 정규화 기울기(-1~1). 이 값을 넘으면 측면 붕괴
+  tiltSpeed: 0.55,      // 기울기 1당 낙하 속도 가산 (정규화 기준)
+  spawnBottom: 300,   // 낙하 시작 시 하단 위치. 0이면 런의 대부분이 대기 시간이 된다
+  dropGravity: 620, dropVy0: 60,
+  lateDropRate: 0.018,  // 물체 번호당 부산물 추가 확률. 후반은 판단이 필요한 방향으로
+  ashCombo: true,       // 화산재가 착지하면 콤보가 끊긴다
+  ashGuardLoss: 22,
+  canCharge: 22, canScore: 300, catchRange: 70,
+  toppleMinMass: 0.35,  // 원래 부재의 이 비율 이상 남아 있어야 붕괴가 성립
+  cleanBonus: 900,      // 기울기를 억제한 채 완파하면 '정밀 철거 수당'
+  cleanTiltMax: 0.26,
+  contactCd: 0.18,   // 접촉 판정 쿨다운. 프레임마다 재판정되는 것을 막는다
+  invulnDur: 1.2,
+  lives: 4,
+  scrapPerFloor: 2,
+  scoreBase: 10,
+  // 콤보 배율: 100콤보마다 +1배씩 무제한 상승. 콤보가 점수의 주축이어야
+  // 실력이 기록으로 나온다. (상한 6배는 콤보 274를 117과 구별하지 못했다)
+  comboStep: 35, comboStepMul: 0.8, comboMulBase: 1.0,
+  timeRamp: 0.004,       // 경과 시간당 낙하 속도 가산. 교착 상태 방지
+};
+
+// 층 셀 HP 구성: 낡은 1 / 새 2 / 석재 3. 최저 HP 위치를 읽어내는 것이 실력.
+function cellHp(rng, n) {
+  const shift = Math.min(TUNE.hardShift * n, 0.65);
+  const r = rng.next();
+  if (r < 0.5 - shift * 0.6) return 1;
+  if (r < 0.85 - shift * 0.2) return 2;
+  return 3;
+}
+
+function buildingSpec(n) {
+  return {
+    index: n,
+    fallSpeed: TUNE.fallBase * Math.pow(TUNE.fallGrowth, n - 1),
+    floors: Math.min(TUNE.floorsBase + Math.floor((n - 1) / TUNE.floorsPer), TUNE.floorsMax),
+  };
+}
+
+
+// ══ logic/parts.js ══
+// 파트 종류. 낙하물은 파트 격자로 정의되고, 파트마다 부서질 때 반응이 다르다.
+const PART = {
+  '#': { kind: 'wall',   hp: 2, mass: 1.0,  name: '벽' },
+  'o': { kind: 'window', hp: 1, mass: 0.5,  name: '창문', splash: 1 },   // 깨지면 인접에 피해
+  'D': { kind: 'door',   hp: 3, mass: 1.8,  name: '현관' },              // 주 지지구조. 질량이 커 기울기 영향 큼
+  '=': { kind: 'core',   hp: 3, mass: 1.2,  name: '기둥' },
+  '^': { kind: 'roof',   hp: 2, mass: 0.7,  name: '지붕', lift: 150 },   // 부수면 크게 뜸
+  '%': { kind: 'flesh',  hp: 2, mass: 1.0,  name: '살점' },              // 동물용
+  'A': { kind: 'rock',   hp: 3, mass: 1.6,  name: '암반' },              // 산용
+  'V': { kind: 'vent',   hp: 2, mass: 0.9,  name: '분화구', emit: 'ash' },
+  'C': { kind: 'slot',   hp: 2, mass: 0.9,  name: '진열칸', emit: 'can' },
+  '.': null, // 빈칸 — 구멍
+};
+
+// 낙하물 도감. 격자는 위에서 아래 순서.
+// 이 표에 한 줄 추가하는 것이 곧 콘텐츠 추가이자 메커닉 추가다.
+const CATALOG = [
+  // ── 진짜 건물 ─────────────────────────────
+  { id: 'house',   name: '단독주택',     cat: '건물', quip: '등기부등본 확인 완료',
+    g: ['.^^^.', '#o#o#', '##D##'] },
+  { id: 'apt',     name: '아파트',       cat: '건물', quip: '재건축 조합 동의율 78%',
+    g: ['#####', 'o#=#o', 'o#=#o', 'o#=#o', '##D##'] },
+  { id: 'office',  name: '회사 사옥',    cat: '건물', quip: '금일 전 직원 재택근무',
+    g: ['#####', 'ooooo', 'ooooo', 'o#=#o', '##D##'] },
+  { id: 'cvs',     name: '편의점',       cat: '건물', quip: '2+1 행사 중이었습니다',
+    g: ['#####', 'ooDoo'] },
+  { id: 'bank',    name: '은행',         cat: '건물', quip: '금고는 비어 있습니다',
+    g: ['#####', '#===#', '#o=o#', '##D##'] },
+  { id: 'gov',     name: '관공서',       cat: '건물', quip: '민원 처리 기한 14일',
+    g: ['.###.', '#ooo#', '#o=o#', '##D##'] },
+  { id: 'temple',  name: '사원',         cat: '건물', quip: '시주는 받지 않습니다',
+    g: ['..^..', '.^^^.', '^^^^^', '#o=o#', '##D##'] },
+  { id: 'donut',   name: '뻥 뚫린 빌딩', cat: '건물', quip: '설계 의도라고 합니다',
+    g: ['#####', '#o.o#', '#...#', '#o.o#', '##D##'] },
+
+  // ── 동물 ─────────────────────────────────
+  { id: 'pig',     name: '돼지',         cat: '동물', quip: '무허가 축사에서 이탈',
+    g: ['.%%%.', '%%%%%', '.%.%.'] },
+  { id: 'cow',     name: '소',           cat: '동물', quip: '한우 등급 판정 불가',
+    g: ['%%...', '%%%%%', '%%%%%', '.%.%.'] },
+  { id: 'giraffe', name: '기린',         cat: '동물', quip: '목이 길어 슬픈 짐승이여',
+    g: ['...%%', '...%.', '...%.', '%%%%%', '.%.%.'] },   // 위가 한쪽으로 쏠려 잘 기운다
+  { id: 'dino',    name: '공룡',         cat: '동물', quip: '멸종 사유 재조사 필요',
+    g: ['....%', '%...%%', '%%%%%%', '.%%.%.'] },
+
+  // ── 산 ───────────────────────────────────
+  { id: 'fuji',    name: '후지산',       cat: '산', quip: '입산 신고 없이 낙하',
+    g: ['..^..', '.AAA.', 'AAAAA'] },
+  { id: 'volcano', name: '폼페이 화산',  cat: '산', quip: '분화 중이니 주의하십시오',
+    g: ['..V..', '.AAA.', 'AAAAA'] },
+
+  // ── 물건 ─────────────────────────────────
+  { id: 'vending', name: '자판기',       cat: '물건', quip: '거스름돈은 나오지 않습니다',
+    g: ['#####', '#CCC#', '#CCC#', '##D##'] },
+
+  { id: 'hippo',   name: '하마',         cat: '동물', quip: '수족관 탈출 신고 접수됨',
+    g: ['.%%%.', '%%%%%%', '%%%%%%', '.%..%.'] },
+  { id: 'lion',    name: '사자',         cat: '동물', quip: '동물원 측 책임 부인',
+    g: ['%%...', '%%%%%', '.%%%%', '.%.%.'] },
+  { id: 'baekdu',  name: '백두산',       cat: '산', quip: '천지 수위 이상 없음',
+    g: ['..V..', '.AAA.', 'AAAAA', 'AAAAAA'] },
+
+  // ── 신화 ─────────────────────────────────
+  { id: 'sphinx',  name: '스핑크스',     cat: '신화', quip: '수수께끼는 생략합니다',
+    g: ['..%%.', '.%%%%', '%%%%%', '%%.%%'] },
+  { id: 'demon',   name: '악마',         cat: '신화', quip: '계약서 사본을 지참하십시오',
+    g: ['%...%', '.%%%.', '%%%%%', '.%.%.'] },
+  { id: 'dragon',  name: '용',           cat: '신화', quip: '문화재 지정 검토 중',
+    g: ['%%..%', '.%%%%', '..%%.', '.%.%.'] },
+];
+
+const byCat = (c) => CATALOG.filter((o) => o.cat === c);
+
+// 스테이지별 등장 풀. 진행할수록 부조리가 깊어진다.
+// 건물 → 동물 → 물건 → 산 → 신화
+const POOL_STAGES = [
+  { from: 1,  cats: ['건물'] },
+  { from: 6,  cats: ['건물', '동물'] },
+  { from: 13, cats: ['건물', '동물', '물건'] },
+  { from: 21, cats: ['건물', '동물', '물건', '산'] },
+  { from: 31, cats: ['건물', '동물', '물건', '산', '신화'] },
+];
+function poolFor(n) {
+  let cats = POOL_STAGES[0].cats;
+  for (const s of POOL_STAGES) if (n >= s.from) cats = s.cats;
+  return CATALOG.filter((o) => cats.includes(o.cat));
+}
+function stageLabel(n) {
+  const c = poolFor(n).length;
+  return POOL_STAGES.filter((s) => n >= s.from).slice(-1)[0].cats.join(' · ') + ` (${c}종)`;
+}
+
+
+// ══ logic/building.js ══
+
+const OBJ_W = 460;   // 화면 대비 물체 폭. 넓으면 이동만으로 낙하 시간이 다 간다
+const OBJ_LEFT = FIELD.POS_X[1] - OBJ_W / 2;
+
+// 낙하물 = 파트 격자. 3칸 고정이 아니라 임의 형태를 가질 수 있다.
+function makeBuilding(n, rng) {
+  const spec = buildingSpec(n);
+  const def = rng.pick(poolFor(n));
+  const rows = def.g;
+  const cols = Math.max(...rows.map((r) => r.length));
+  const cellW = OBJ_W / cols;
+  const hpScale = 1 + Math.floor((n - 1) / 12) * 0.5; // 완만한 성장
+  const parts = [];
+  rows.forEach((row, r) => {
+    for (let c = 0; c < cols; c++) {
+      const def2 = PART[row[c]];
+      if (!def2) continue;
+      parts.push({
+        c, r, ch: row[c], kind: def2.kind, name: def2.name,
+        hp: def2.hp * hpScale, maxHp: def2.hp * hpScale,
+        mass: def2.mass, alive: true,
+      });
+    }
+  });
+  return {
+    index: n, def, rows, cols, cellW, parts,
+    topY: TUNE.spawnBottom - rows.length * FIELD.FLOOR_H,
+    speed: spec.fallSpeed, alive: true, toppled: 0,
+  };
+}
+
+const partX = (b, p) => OBJ_LEFT + (p.c + 0.5) * b.cellW;
+const partTop = (b, p) => b.topY + p.r * FIELD.FLOOR_H;
+const aliveParts = (b) => b.parts.filter((p) => p.alive);
+
+// 하단 = 살아 있는 파트 중 가장 아래 행의 밑면
+function bottomOf(b) {
+  let maxR = -1;
+  for (const p of b.parts) if (p.alive && p.r > maxR) maxR = p.r;
+  return b.topY + (maxR + 1) * FIELD.FLOOR_H;
+}
+const heightOf = (b) => b.rows.length * FIELD.FLOOR_H;
+
+// ── 물리: 남은 질량의 무게중심으로 기울기를 낸다 ──────────
+// 파트를 어디서 부수든 비율에 맞춰 기운다. 형태가 곧 물리 특성이 된다.
+// (기린은 위가 쏠려 잘 기울고, 가운데 뚫린 빌딩은 중앙을 쳐도 안 기운다)
+function tiltOf(b) {
+  let m = 0, mx = 0;
+  for (const p of b.parts) {
+    if (!p.alive) continue;
+    // 높이 있는 질량일수록 전도 모멘트가 크다
+    const lever = 1 + (b.rows.length - 1 - p.r) * 0.14;
+    const w = p.mass * lever;
+    m += w; mx += w * (OBJ_LEFT + (p.c + 0.5) * b.cellW);
+  }
+  if (m <= 0) return 0;
+  const off = (mx / m - FIELD.POS_X[1]) / (OBJ_W / 2);
+  return Math.max(-1, Math.min(1, -off)); // 부순 쪽으로 기운다
+}
+const tiltMul = (b) => 1 + Math.abs(tiltOf(b)) * TUNE.tiltSpeed;
+const timeToGround = (b, stall = 1) =>
+  (b.speed > 0 ? (FIELD.GROUND_Y - bottomOf(b)) / (b.speed * stall * tiltMul(b)) : Infinity);
+
+// 칼날은 위로 reach층, 아래로 1층까지 닿는다.
+// 아래 여유가 없으면 점프해서 물체 밑면보다 높이 올라간 순간 아무것도 못 친다.
+// 칼날은 좌우로 slack, 위로 reach층, 아래로 1층까지 닿는다.
+// 판정이 좁으면 파괴로 구멍이 뚫린 뒤 "칠 게 없는" 상태가 대부분이 된다 (실측 59.8%).
+function partAtBlade(b, playerX, bladeY, reach, skip = null) {
+  const hi = bladeY - reach * FIELD.FLOOR_H;
+  const lo = bladeY + FIELD.FLOOR_H * TUNE.bladeDown;
+  const slack = TUNE.bladeSlack;
+  let best = null, bestD = Infinity;
+  for (const p of b.parts) {
+    if (!p.alive) continue;
+    if (skip && skip.includes(p)) continue;
+    const top = partTop(b, p), bot = top + FIELD.FLOOR_H;
+    if (bot < hi || top > lo) continue;             // 높이 범위 밖
+    const cx = OBJ_LEFT + (p.c + 0.5) * b.cellW;
+    const d = Math.abs(playerX - cx);
+    if (d > b.cellW / 2 + slack) continue;          // 좌우 범위 밖
+    // 같은 범위 안에서는 아래쪽 우선, 그다음 가까운 쪽
+    if (!best || p.r > best.r || (p.r === best.r && d < bestD)) { best = p; bestD = d; }
+  }
+  return best;
+}
+
+// 파트에 피해. 반환: { killed, emits, lift }
+function damagePart(b, p, dmg) {
+  const out = { killed: 0, emits: [], lift: 0 };
+  if (!b.alive || !p || !p.alive) return out;
+  p.hp -= dmg;
+  if (p.hp > 0) return out;
+  p.alive = false;
+  out.killed = 1;
+  const def = PART[p.ch];
+  if (def.lift) out.lift = def.lift;                       // 지붕은 크게 뜬다
+  if (def.emit) out.emits.push({ kind: def.emit, x: partX(b, p), y: partTop(b, p) });
+  if (def.splash) {                                         // 창문은 인접으로 번진다
+    for (const q of b.parts) {
+      if (!q.alive || q === p) continue;
+      if (Math.abs(q.c - p.c) + Math.abs(q.r - p.r) !== 1) continue;
+      q.hp -= def.splash;
+      if (q.hp <= 0) { q.alive = false; out.killed += 1; }
+    }
+  }
+  if (!b.parts.some((q) => q.alive)) b.alive = false;
+  return out;
+}
+
+// 매입 도장은 물리 타격이 아니라 서류다. 높이 제약 없이 조준한 열의 최하단 부재를 잡는다.
+function partInColumn(b, playerX, skip = null) {
+  let best = null;
+  for (const p of b.parts) {
+    if (!p.alive) continue;
+    if (skip && skip.includes(p)) continue;
+    const px = OBJ_LEFT + p.c * b.cellW;
+    if (playerX < px - 6 || playerX > px + b.cellW + 6) continue;
+    if (!best || p.r > best.r) best = p;
+  }
+  return best;
+}
+
+const totalTaps = (b) => aliveParts(b).length;
+
+
+// ══ logic/classes.js ══
+// 원작 코어 루프의 4기둥: ①필요타수 암기 ②점프 타이밍 ③가드 선택 ④콤보 유지
+// 각 클래스는 이 중 하나를 깨뜨린다. 철거반장은 아무것도 깨지 않아 기준선이 된다.
+const CLASSES = {
+  chulgeo: {
+    id: 'chulgeo', name: '철거반장 김두철', weapon: '곡괭이', breaks: '없음 (기준선)',
+    style: 'melee',
+    dmg: 2.1, reach: 3, cdMul: 0.82, aoe: false,
+    special: 'wipe',
+  },
+  johap: {
+    id: 'johap', name: '재개발 조합장', weapon: '매입 스티커', breaks: '① 필요타수 암기',
+    style: 'stamp',   // 때리지 않는다. 도장을 찍어 모으고 한 번에 터뜨린다
+    dmg: 1, reach: 3, cdMul: 0.9, aoe: false,
+    hpIgnore: true, stampMax: 6, stampMin: 2, priceCapHp: 5,
+    stampDecay: 1.35,  // 매입한 부재는 계약 이행으로 초당 이만큼 스스로 철거된다                 // 층 HP 무관 1타 제거
+    fundsStart: 60, fundsPerHp: 8,
+    fundsRegenCombo: 11, fundsRegenIdle: 22, fundsMax: 150, // idle 회복이 없으면 데드락
+    special: 'wipe',
+  },
+  dosa: {
+    id: 'dosa', name: '무허가 도사', weapon: '부적', breaks: '② 점프 타이밍',
+    style: 'talisman', // 부적을 던져 붙이고 원격 기폭한다. 밑에 서 있을 필요가 없다.
+    dmg: 1, reach: 3, cdMul: 0.55, aoe: false,
+    projectile: true, wardSpeed: 700, wardSpread: 0.16,
+    dudChance: 0.2, wardMax: 8, wardDmg: 3, wardSplash: 1,
+    wardDecay: 0.9,   // 붙은 부적은 서서히 부재를 태운다 (2동작 구조의 처리량 보정)                // 불발 -> 타수 계산이 확률적으로 깨진다
+    special: 'ward',
+  },
+  bunyeo: {
+    id: 'bunyeo', name: '아파트 부녀회장', weapon: '소음·민원', breaks: '③ 가드 선택',
+    style: 'noise',   // 가드가 곧 공격. 버티는 클래스
+    dmg: 0.42, reach: 3, cdMul: 1, aoe: true, // 3위치 동시
+    attackWhileGuard: true, guardDps: 2.6,                  // 가드 중에도 공격이 들어간다
+    guardMaxMul: 1.4, guardDrainMul: 0.65,
+    special: 'freeze',
+  },
+};
+const CLASS_IDS = Object.keys(CLASSES);
+const CLASS_COST = { johap: 300, dosa: 600, bunyeo: 900 };
+
+
+// ══ logic/skills.js ══
+// 로드아웃은 패시브·조건발동형이다. 손가락이 방향키+Z+X에 이미 묶여 있어 액티브 키를 낼 수 없다.
+// 4기둥에 맞춰 4갈래 x 3단.
+const SKILLS = {
+  tap1: { id: 'tap1', branch: '타수', tier: 1, cost: 120, prereq: null, name: '곡괭이 연마', desc: '공격 피해 ×1.5 (조합장: 매입가 −20%)' },
+  tap2: { id: 'tap2', branch: '타수', tier: 2, cost: 260, prereq: 'tap1', name: '정밀 타격', desc: '초과 피해 위층 이월 (조합장: 매입가 −15%)' },
+  tap3: { id: 'tap3', branch: '타수', tier: 3, cost: 520, prereq: 'tap2', name: '관통', desc: '2층 동시 타격' },
+
+  jmp1: { id: 'jmp1', branch: '점프', tier: 1, cost: 120, prereq: null, name: '체공 연장', desc: '정점 유지 0.2초' },
+  jmp2: { id: 'jmp2', branch: '점프', tier: 2, cost: 260, prereq: 'jmp1', name: '이단 점프', desc: '공중에서 한 번 더 점프' },
+  jmp3: { id: 'jmp3', branch: '점프', tier: 3, cost: 520, prereq: 'jmp2', name: '낙하 제어', desc: '하강 중 위치 전환' },
+
+  grd1: { id: 'grd1', branch: '가드', tier: 1, cost: 120, prereq: null, name: '강화 가드', desc: '게이지 소모 −30% (부녀회장: 회복 +30%)' },
+  grd2: { id: 'grd2', branch: '가드', tier: 2, cost: 260, prereq: 'grd1', name: '반격 가드', desc: '점프가드 성공 시 공격 1회분 피해 (조합장: 자금 회복)' },
+  grd3: { id: 'grd3', branch: '가드', tier: 3, cost: 520, prereq: 'grd2', name: '완전 가드', desc: '지면가드 시 콤보 절반 유지, 게이지 2배 소모' },
+
+  cmb1: { id: 'cmb1', branch: '콤보', tier: 1, cost: 120, prereq: null, name: '콤보 보험', desc: '콤보 끊김 3회 무시' },
+  cmb2: { id: 'cmb2', branch: '콤보', tier: 2, cost: 260, prereq: 'cmb1', name: '콤보 이자', desc: '50콤보마다 필살기 충전 +20%' },
+  cmb3: { id: 'cmb3', branch: '콤보', tier: 3, cost: 520, prereq: 'cmb2', name: '잔심', desc: '필살기 후 콤보 유지' },
+};
+const SKILL_IDS = Object.keys(SKILLS);
+
+// 특성은 계정 진행 전용. 스킬(런 안의 플레이 스타일)과 역할을 분리한다.
+const TRAITS = {
+  pocket: { id: 'pocket', name: '뒷주머니', cost: 200, desc: '고철 획득 +25%' },
+  helmet: { id: 'helmet', name: '안전모', cost: 450, desc: '시작 라이프 +1' },
+  slot4: { id: 'slot4', name: '무면허 확장', cost: 900, desc: '로드아웃 4번째 슬롯' },
+};
+
+
+// ══ logic/engine.js ══
+
+const DT = 1 / 60;
+
+// 기술표. 격투게임의 깊이는 버튼 수가 아니라 입력의 문맥에서 온다.
+const MOVES = {
+  light:  { name: '약베기',     dmg: 1,   cd: 0.15, reach: 0, cells: 1 },
+  combo3: { name: '3단 마무리', dmg: 3,   cd: 0.32, reach: 0, cells: 2 },
+  upper:  { name: '올려베기',   dmg: 1.5, cd: 0.34, reach: 2, cells: 1 },
+  dash:   { name: '돌진 베기',  dmg: 1.5, cd: 0.26, reach: 0, cells: 1 },
+  charge: { name: '차지 강타',  dmg: 1.5, cd: 0.60, reach: 1, cells: 2 },
+};
+
+function createRun(opts) {
+  const { seed, classId, skills = [], traits = [] } = opts;
+  const rng = makeRng(seed);
+  const cls = CLASSES[classId];
+  const has = (x) => skills.includes(x) || traits.includes(x);
+  return {
+    rng, cls, skills, traits, has,
+    t: 0,
+    building: makeBuilding(1, rng),
+    // 플레이어
+    x: FIELD.POS_X[1],   // 연속 위치
+    moveDir: 0,
+    airT: null,            // null = 지면, 그 외 = 점프 경과 시간
+    apexHold: 0,
+    jumpsUsed: 0,
+    guarding: false,
+    attackCd: 0,
+    // 자원
+    guard: TUNE.guardMax * (cls.guardMaxMul || 1),
+    guardMax: TUNE.guardMax * (cls.guardMaxMul || 1),
+    special: 0,
+    funds: cls.fundsStart || 0,
+    lives: TUNE.lives + (has('helmet') ? 1 : 0),
+    insurance: has('cmb1') ? 3 : 0,
+    invulnUntil: 0,
+    freezeUntil: 0,
+    contactCd: 0, headCd: 0, bumps: 0,
+    attackAttempts: 0, whiffs: 0,
+    chain: 0, chainT: -99,      // 3단 콤보 체인
+    airWhiffs: 0,
+    guardPressedAt: -99,
+    hoverUntil: 0,        // 저스트 가드 판정 기준
+    lastMove: null,
+    justGuards: 0, topples: 0, toppleDeaths: 0,
+    trainer: opts.trainer || null,
+    drops: [], catches: 0, ashHits: 0, dropsBroken: 0,
+    stamps: [], wards: [], flying: [], detonations: 0, cleanClears: 0,
+    peakTilt: 0,
+    // 성적
+    combo: 0, maxCombo: 0, score: 0, scrap: 0,
+    buildingsCleared: 0, floorsDestroyed: 0,
+    jumpGuards: 0, groundGuards: 0, crushes: 0, specialUses: 0, whiffs: 0,
+    over: false,
+  };
+}
+
+// ── 플레이어 기하 ────────────────────────────────────────
+function jumpOffset(r) {
+  if (r.airT === null) return 0;
+  const p = Math.min(r.airT / TUNE.jumpDur, 1);
+  return TUNE.jumpHeight * 4 * (p - p * p);
+}
+const feetY = (r) => FIELD.GROUND_Y - jumpOffset(r);
+const bladeY = (r) => feetY(r) - TUNE.playerH;
+const airborne = (r) => r.airT !== null;
+const frozen = (r) => r.t < r.freezeUntil;
+// 접촉 판정면은 지면이 아니라 플레이어의 머리다.
+// 지면 기준이면 점프 시 건물을 통과해버리고, 높이 뛰는 리스크도 사라진다.
+const contactY = (r) => bladeY(r);
+const groundGap = (r) => FIELD.GROUND_Y - bottomOf(r.building);
+const headGap = (r) => bladeY(r) - bottomOf(r.building);
+const fallRate = (r) => r.building.speed * (1 + TUNE.timeRamp * r.t)
+  * (r.trainer && r.trainer.fallMul ? r.trainer.fallMul : 1) * tiltMul(r.building);
+
+// 지면 접촉까지 남은 거리·시간. 실패 조건은 지면이므로 봇/UI는 이 값을 봐야 한다.
+const timeToContact = (r) => {
+  const v = r.building.speed * (1 + TUNE.timeRamp * r.t);
+  return v > 0 ? (contactY(r) - bottomOf(r.building)) / v : Infinity;
+};
+const invuln = (r) => r.t < r.invulnUntil;
+const reachOf = (r) => r.cls.reach + (r.has('tap3') ? 1 : 0);
+// grd1: 이미 소모 보정을 가진 클래스(부녀회장)에게는 소모 감소가 아니라 회복 증가로 번역된다.
+const grdCostMul = (r) => (r.has('grd1') && !(r.cls.guardDrainMul < 1) ? 0.7 : 1);
+const grdRegenMul = (r) => (r.has('grd1') && r.cls.guardDrainMul < 1 ? 1.3 : 1);
+
+// ── 액션 ─────────────────────────────────────────────────
+// 방향 입력을 유지하는 방식. 칸 단위가 아니라 모든 좌표로 이동한다.
+function setMove(r, dir) {
+  if (r.over) return false;
+  if (airborne(r) && !r.has('jmp3')) { r.moveDir = 0; return false; }
+  r.moveDir = Math.sign(dir);
+  return true;
+}
+const X_MIN = OBJ_LEFT - 70;
+const X_MAX = OBJ_LEFT + OBJ_W + 70;
+function stepMove(r) {
+  if (!r.moveDir) return;
+  if (airborne(r) && !r.has('jmp3')) return;
+  const slow = r.attackCd > 0 ? TUNE.moveSlowOnAttack : 1;
+  r.x = Math.max(X_MIN, Math.min(X_MAX, r.x + r.moveDir * TUNE.moveSpeed * slow * DT));
+}
+
+function jump(r) {
+  if (r.over) return false;
+  if (!airborne(r)) { r.airT = 0; r.jumpsUsed = 1; return true; }
+  if (r.has('jmp2') && r.jumpsUsed < 2) { r.airT = 0; r.jumpsUsed = 2; return true; }
+  return false;
+}
+
+function setGuard(r, on) {
+  if (r.over) return false;
+  if (on && !r.guarding) r.guardPressedAt = r.t;
+  if (on && r.guard < TUNE.guardMinToHold) { r.guarding = false; return false; }
+  r.guarding = !!on;
+  return true;
+}
+const isJust = (r) => r.t - r.guardPressedAt <= TUNE.justWindow;
+
+function attack(r, kind = 'light', power = 1) {
+  if (r.over || r.attackCd > 0) return false;
+  if (r.guarding && !r.cls.attackWhileGuard) return false;
+  // 원작 규칙: 공중에서는 벨 수 없다. 공중은 가드 전용이며 그것이 콤보를 지키는 수단이다.
+  if (airborne(r)) { r.airWhiffs = (r.airWhiffs || 0) + 1; return false; }
+
+  // 3단 체인: 약베기를 창 안에 이어 넣으면 3타째가 마무리로 승격된다
+  if (kind === 'light') {
+    if (r.t - r.chainT > TUNE.chainWindow) r.chain = 0;
+    if (r.chain >= 2) { kind = 'combo3'; r.chain = 0; } else r.chain += 1;
+    r.chainT = r.t;
+  } else r.chain = 0;
+
+  const mv = MOVES[kind];
+  r.lastMove = { kind, name: mv.name, t: r.t };
+  r.attackCd = mv.cd * r.cls.cdMul;
+
+  const b = r.building;
+  const reach = reachOf(r) + mv.reach;
+  // 기술의 타격 폭. 광역 클래스는 항상 3위치.
+  const cells = r.cls.aoe ? 3 : mv.cells;
+  const cw = b.cellW;
+  const xs = cells >= 3 ? [r.x - cw, r.x, r.x + cw]
+    : cells === 2 ? [r.x, r.x + cw]
+    : [r.x];
+
+  // 낙하물(화산재·캔)도 벨 수 있다
+  const bladeYy = bladeY(r);
+  let hitDrop = false;
+  for (const d of r.drops) {
+    if (!d.alive) continue;
+    if (Math.abs(d.x - r.x) > 80) continue;
+    if (d.y < bladeYy - reach * FIELD.FLOOR_H || d.y > bladeYy + 20) continue;
+    d.alive = false; hitDrop = true;
+    if (d.kind === 'can') { // 베어서 받으면 절반 보상. 자리 잡고 받으면 전액.
+      r.catches += 1;
+      r.special = Math.min(r.special + TUNE.canCharge * 0.5, TUNE.specialMax);
+      r.score += TUNE.canScore * 0.5;
+    } else { r.dropsBroken += 1; r.score += 60; }
+  }
+
+  const skip = r.cls.style === 'stamp' ? r.stamps
+    : r.cls.style === 'talisman' ? r.wards.map((w) => w.part) : null;
+  const targets = [];
+  for (const xx of xs) {
+    // 서류 계열은 높이 제약이 없다
+    const pt = r.cls.style === 'stamp' ? partInColumn(b, xx, skip)
+      : partAtBlade(b, xx, bladeYy, reach, skip);
+    if (pt && !targets.includes(pt)) targets.push(pt);
+  }
+  if (!targets.length) {
+    if (!hitDrop) r.whiffs += 1; else r.lastMove.name += ' (낙하물 격추)';
+    return true;
+  }
+
+  b.topY -= TUNE.attackPush;
+  const mult = r.dmgMult * (r.t < r.gakseongUntil ? 2 : 1);
+  const dmg = r.cls.dmg * mv.dmg * (kind === 'charge' ? power : 1) * mult;
+  let killed = 0;
+
+  if (r.cls.style === 'stamp') {
+    // 도장은 부수지 않는다. 표시만 하고 X로 한 번에 터뜨린다.
+    const pt = targets[0];
+    if (r.stamps.length >= r.cls.stampMax) { r.lastMove.name = '매입 한도 초과'; return true; }
+    const disc = (r.has('tap1') ? 0.8 : 1) * (r.has('tap2') ? 0.85 : 1);
+    const price = Math.min(pt.maxHp, r.cls.priceCapHp) * r.cls.fundsPerHp * disc;
+    if (r.funds < price) { r.whiffs += 1; r.lastMove.name = '자금 부족'; return true; }
+    r.funds -= price;
+    r.stamps.push(pt);
+    b.topY -= TUNE.attackPush;
+    r.lastMove.name = `매입 도장 ${r.stamps.length}/${r.cls.stampMax}`;
+    return true;
+
+  } else if (r.cls.style === 'talisman') {
+    // 부적을 위로 던진다. 부재에 닿으면 달라붙고, 빗나가면 그대로 날아간다.
+    if (r.wards.length + r.flying.length >= r.cls.wardMax) { r.lastMove.name = '부적 한도 초과'; return true; }
+    const dud = r.rng.next() < r.cls.dudChance;
+    r.flying.push({
+      x: r.x, y: bladeY(r) - 6,
+      vx: (r.rng.next() - 0.5) * 2 * r.cls.wardSpread * r.cls.wardSpeed,
+      vy: -r.cls.wardSpeed, dud, alive: true, t: r.t,
+    });
+    r.lastMove.name = dud ? '부적 투척 (불발)' : '부적 투척';
+    r.attackAttempts += 1;
+    return true;
+
+  } else {
+    for (const pt of targets) { if (!b.alive) break; killed += applyPart(r, b, pt, dmg); }
+  }
+
+  r.attackAttempts += 1;
+  if (killed) { onFloorsDown(r, killed); checkTopple(r); }
+  return true;
+}
+
+// 일괄 제거(측면 붕괴·필살기)도 파트의 고유 반응을 발동시켜야 한다.
+// 화산을 넘어뜨리면 화산재가 쏟아지는 것이 맞다.
+function clearParts(r, b, list) {
+  let n = 0;
+  for (const q of list) {
+    if (!q.alive) continue;
+    const def = PART[q.ch];
+    q.alive = false; n += 1;
+    if (def && def.emit) {
+      r.drops.push({
+        kind: def.emit, alive: true, vy: TUNE.dropVy0,
+        x: OBJ_LEFT + (q.c + 0.5) * b.cellW + (r.rng.next() - 0.5) * 40,
+        y: b.topY + q.r * FIELD.FLOOR_H,
+      });
+    }
+  }
+  if (!b.parts.some((q) => q.alive)) b.alive = false;
+  return n;
+}
+
+// 파트 파괴의 부수 효과를 런 상태에 반영한다.
+function applyPart(r, b, pt, dmg) {
+  const res = damagePart(b, pt, dmg);
+  if (res.lift) b.topY -= res.lift;                 // 지붕은 크게 뜬다
+  for (const e of res.emits) {
+    r.drops.push({ kind: e.kind, x: e.x, y: e.y, vy: TUNE.dropVy0, alive: true });
+  }
+  if (res.killed) r.lastPart = pt.name;
+  return res.killed;
+}
+
+// X 키. 클래스마다 의미가 다르다 — 이것이 손놀림이 갈리는 지점이다.
+function heavyAction(r, power = 1) {
+  if (r.over) return false;
+  const b = r.building;
+  if (r.cls.style === 'stamp') {
+    const list = r.stamps.filter((p) => p.alive);
+    if (list.length < r.cls.stampMin) { r.lastMove = { kind: 'fail', name: `매입 ${r.cls.stampMin}개 이상 필요`, t: r.t }; return false; }
+    const n = clearParts(r, b, list);
+    r.stamps = [];
+    r.detonations += 1;
+    b.topY -= TUNE.attackPush * 6;
+    r.lastMove = { kind: 'heavy', name: `일괄 철거 ${n}부재`, t: r.t };
+    if (n) { onFloorsDown(r, n); checkTopple(r); }
+    return true;
+  }
+  if (r.cls.style === 'talisman') {
+    const list = r.wards.filter((w) => w.part.alive);
+    if (!list.length) { r.lastMove = { kind: 'fail', name: '부적 없음', t: r.t }; return false; }
+    let killed = 0;
+    for (const w of list) killed += applyPart(r, b, w.part, r.cls.wardDmg);
+    // 기폭은 인접까지 번진다
+    for (const w of list) {
+      for (const q of b.parts) {
+        if (!q.alive) continue;
+        if (Math.abs(q.c - w.part.c) + Math.abs(q.r - w.part.r) !== 1) continue;
+        killed += applyPart(r, b, q, r.cls.wardSplash);
+      }
+    }
+    r.wards = [];
+    r.detonations += 1;
+    b.topY -= TUNE.attackPush * 6;
+    r.lastMove = { kind: 'heavy', name: `부적 기폭 ${list.length}장`, t: r.t };
+    if (killed) { onFloorsDown(r, killed); checkTopple(r); }
+    return true;
+  }
+  return attack(r, 'charge', power); // 근접·소음 계열은 차지 강타
+}
+
+function dashAttack(r, dir) {
+  if (r.over || airborne(r)) return false;
+  r.x = Math.max(X_MIN, Math.min(X_MAX, r.x + dir * TUNE.dashDist));
+  return attack(r, 'dash');
+}
+
+// 측면 붕괴 — 한쪽을 몰아쳐 기울기 한계를 넘기면 그 방향으로 무너진다.
+// 남은 층이 한 번에 무너지지만, 무너지는 쪽에 서 있으면 깔린다.
+function checkTopple(r) {
+  const b = r.building;
+  const tl = tiltOf(b);
+  if (!b.alive || Math.abs(tl) < TUNE.tiltLimit) return;
+  // 막판에는 남은 한두 조각이 중심을 벗어나 기울기가 폭발한다.
+  // 붕괴는 아직 덩어리가 남아 있을 때만 의미가 있다.
+  const live = aliveParts(b).length;
+  if (live < 4 || live < b.parts.length * TUNE.toppleMinMass) return;
+  const dir = tl > 0 ? 1 : -1;
+  b.toppled = dir;
+  r.topples += 1;
+  const edge = dir > 0 ? OBJ_LEFT + OBJ_W : OBJ_LEFT;
+  const inDanger = Math.abs(r.x - edge) < TUNE.toppleDanger
+    || (dir > 0 ? r.x > FIELD.POS_X[1] : r.x < FIELD.POS_X[1]);
+  if (inDanger && !r.guarding && !invuln(r)) {
+    r.toppleDeaths += 1;
+    if (!(r.trainer && r.trainer.infiniteLives)) r.lives -= 1;
+    breakCombo(r);
+    r.invulnUntil = r.t + 0.8;
+    if (r.lives <= 0) { r.lives = 0; r.over = true; }
+  }
+  const rest = clearParts(r, b, b.parts.slice());
+  b.alive = false;
+  if (rest) onFloorsDown(r, rest);
+}
+
+function useSpecial(r) {
+  if (r.over || r.special < TUNE.specialMax) return false;
+  const b = r.building;
+  let killed = 0;
+  if (r.cls.special === 'wipe') {
+    // 전부 치우면 필살기가 곧 자동 클리어가 된다. 아래쪽부터 일부만.
+    const live = aliveParts(b).sort((x, y) => y.r - x.r);
+    killed = clearParts(r, b, live.slice(0, Math.max(1, Math.ceil(live.length * TUNE.wipeRatio))));
+    if (r.cls.hpIgnore) r.funds = 0;
+  } else if (r.cls.special === 'ward') {
+    const live = aliveParts(b).sort((x, y) => y.r - x.r);
+    killed = clearParts(r, b, live.slice(0, Math.ceil(live.length / 2)));
+    r.invulnUntil = r.t + TUNE.invulnDur * 2;
+  } else if (r.cls.special === 'freeze') {
+    r.freezeUntil = r.t + 3;
+  }
+  r.special = 0;
+  r.specialUses += 1;
+  if (r.cls.special !== 'freeze') r.invulnUntil = Math.max(r.invulnUntil, r.t + TUNE.invulnDur);
+  if (killed) onFloorsDown(r, killed, false);
+  // 방어용 필살기(정지)는 파괴가 없어도 콤보를 깨지 않는다.
+  else if (r.cls.special !== 'freeze' && !r.has('cmb3')) breakCombo(r);
+  return true;
+}
+
+// ── 판정 ─────────────────────────────────────────────────
+// gauge=false : 필살기로 부순 층은 게이지를 채우지 않는다.
+// 안 그러면 (필살기 -> 대량 파괴 -> 콤보 상승 -> 충전 가속 -> 필살기) 폭주가 생긴다.
+function onFloorsDown(r, n, gauge = true) {
+  for (let i = 0; i < n; i++) {
+    r.combo += 1;
+    r.maxCombo = Math.max(r.maxCombo, r.combo);
+    r.score += TUNE.scoreBase * (TUNE.comboMulBase + Math.floor(r.combo / TUNE.comboStep) * TUNE.comboStepMul);
+    if (!gauge) continue;
+    let charge = Math.min(TUNE.specialBase + r.combo * TUNE.specialPerCombo, TUNE.specialCap);
+    if (r.has('cmb2')) charge *= 1 + 0.2 * Math.floor(r.combo / 50);
+    r.special = Math.min(r.special + charge, TUNE.specialMax);
+  }
+  r.floorsDestroyed += n;
+  r.scrap += n * TUNE.scrapPerFloor * (r.has('pocket') ? 1.25 : 1);
+  if (r.cls.fundsRegenCombo && r.combo > 0) {
+    r.funds = Math.min(r.funds + r.cls.fundsRegenCombo, r.cls.fundsMax);
+  }
+}
+
+// 지면가드도 콤보를 완전히 지키게 하면 콤보가 절대 끊기지 않아 게임이 폭주한다.
+// 절반 유지로 완화.
+function halveCombo(r) {
+  if (r.insurance > 0) { r.insurance -= 1; return; }
+  r.combo = Math.floor(r.combo / 2);
+}
+
+function breakCombo(r) {
+  if (r.insurance > 0) { r.insurance -= 1; return; }
+  r.combo = 0;
+}
+
+// 공중에서 건물 밑면에 닿았을 때.
+// 가드 중이면 점프가드로 인터셉트, 아니면 그냥 밀려 내려간다 (피해 없음).
+// 점프해서 때리는 것이 코어 루프이므로 점프 자체를 처벌하면 안 된다.
+function resolveHeadContact(r) {
+  const b = r.building;
+  if (invuln(r)) return;
+  if (r.guarding) {
+    r.jumpGuards += 1;
+    if (isJust(r)) { // 저스트 가드 — 접촉 직전에 눌렀을 때만
+      r.justGuards += 1;
+      b.topY -= TUNE.justPush;
+      r.hoverUntil = r.t + TUNE.justHover;
+      r.special = Math.min(r.special + TUNE.justCharge, TUNE.specialMax);
+      // 저스트 가드는 점수원이다. 실력을 기록으로 바꾸는 수단.
+      r.combo += TUNE.justComboBonus;
+      r.maxCombo = Math.max(r.maxCombo, r.combo);
+      r.score += TUNE.justScore * (TUNE.comboMulBase + Math.floor(r.combo / TUNE.comboStep));
+      r.lastMove = { kind: 'just', name: '저스트 가드', t: r.t };
+      return;
+    }
+    b.topY -= TUNE.jumpGuardPush;
+    r.hoverUntil = r.t + TUNE.jumpHover;
+    r.guard -= TUNE.guardOnHit * grdCostMul(r);
+    if (r.has('grd2')) {
+      if (r.cls.hpIgnore) r.funds = Math.min(r.funds + r.cls.fundsPerHp, r.cls.fundsMax);
+      else {
+        const t2 = partAtBlade(b, r.x, bladeY(r), reachOf(r));
+        if (t2) { const k = applyPart(r, b, t2, r.cls.dmg); if (k) onFloorsDown(r, k); }
+      }
+    }
+    return; // 콤보 유지
+  }
+  // 가드 없이 부딪히면 상승이 멈추고 하강으로 전환된다. 피해는 없다.
+  r.bumps += 1;
+  if (r.airT !== null && r.airT < TUNE.jumpDur / 2) r.airT = TUNE.jumpDur - r.airT;
+}
+
+// 지면 접촉이 실패 조건이다.
+function resolveContact(r) {
+  const b = r.building;
+  if (invuln(r)) { b.topY -= TUNE.groundGuardPush; return; }
+
+  if (r.guarding) {
+    // 지상에서도 저스트 판정이 성립하면 콤보를 지킨다.
+    // 점프가드는 콤보를 지키지만 공중 시간을 잃는다 → 최상위 기술은 타이밍으로 그 비용을 없앤다.
+    if (isJust(r)) {
+      r.justGuards += 1;
+      b.topY -= TUNE.justPush;
+      r.hoverUntil = r.t + TUNE.justHover * 0.7;
+      r.special = Math.min(r.special + TUNE.justCharge, TUNE.specialMax);
+      r.combo += TUNE.justComboBonus;
+      r.maxCombo = Math.max(r.maxCombo, r.combo);
+      r.score += TUNE.justScore * (TUNE.comboMulBase + Math.floor(r.combo / TUNE.comboStep));
+      r.lastMove = { kind: 'just', name: '지상 저스트 가드', t: r.t };
+      return;
+    }
+    r.groundGuards += 1;
+    b.topY -= TUNE.groundGuardPush;
+    r.hoverUntil = r.t + TUNE.groundHover;
+    r.guard -= TUNE.guardOnHit * grdCostMul(r) * (r.has('grd3') ? 2 : 1);
+    if (r.has('grd3')) halveCombo(r); else breakCombo(r);
+    return;
+  }
+
+  // 가드 실패 = 깔림
+  r.crushes += 1;
+  if (!(r.trainer && r.trainer.infiniteLives)) r.lives -= 1;
+  breakCombo(r);
+  b.topY -= TUNE.groundGuardPush;
+  r.invulnUntil = r.t + 0.6;
+  if (r.lives <= 0) { r.lives = 0; r.over = true; }
+}
+
+function step(r) {
+  if (r.over) return;
+  r.t += DT;
+
+  // 점프 아크
+  if (airborne(r)) {
+    const atApex = Math.abs(r.airT - TUNE.jumpDur / 2) < DT;
+    if (r.has('jmp1') && atApex && r.apexHold < 0.2) r.apexHold += DT;
+    else r.airT += DT;
+    if (r.airT >= TUNE.jumpDur) {
+      r.airT = null; r.jumpsUsed = 0; r.apexHold = 0;
+    }
+  }
+
+  // 가드 게이지
+  if (r.guarding) {
+    r.guard -= TUNE.guardDrain * (r.cls.guardDrainMul || 1) * grdCostMul(r) * DT;
+    if (r.guard <= 0) { r.guard = 0; r.guarding = false; }
+  } else {
+    r.guard = Math.min(r.guard + TUNE.guardRegen * grdRegenMul(r) * DT, r.guardMax);
+  }
+
+  stepMove(r);
+  if (r.attackCd > 0) r.attackCd -= DT;
+  if (r.cls.fundsRegenIdle) r.funds = Math.min(r.funds + r.cls.fundsRegenIdle * DT, r.cls.fundsMax);
+
+  // 낙하 + 접촉
+  const b = r.building;
+  // 던진 부적의 비행과 부착
+  if (r.flying.length) {
+    for (const f of r.flying) {
+      if (!f.alive) continue;
+      f.x += f.vx * DT; f.y += f.vy * DT;
+      if (f.y < -40 || f.x < -40 || f.x > FIELD.W + 40) { f.alive = false; continue; }
+      if (f.dud) continue;                       // 불발은 그냥 지나간다
+      const pt = partAtBlade(b, f.x, f.y, 0, r.wards.map((w) => w.part));
+      if (pt) { f.alive = false; r.wards.push({ part: pt, t: r.t }); b.topY -= TUNE.attackPush; }
+    }
+    r.flying = r.flying.filter((f) => f.alive);
+  }
+  // 붙은 부적은 서서히 부재를 태운다
+  if (r.cls.wardDecay && r.wards.length) {
+    let k = 0;
+    for (const w of r.wards) {
+      if (!w.part.alive) continue;
+      const res = damagePart(b, w.part, r.cls.wardDecay * DT);
+      if (res.lift) b.topY -= res.lift;
+      for (const e of res.emits) r.drops.push({ kind: e.kind, x: e.x, y: e.y, vy: TUNE.dropVy0, alive: true });
+      k += res.killed;
+    }
+    r.wards = r.wards.filter((w) => w.part.alive);
+    if (k) { onFloorsDown(r, k); checkTopple(r); }
+  }
+
+  // 매입한 부재는 계약이 이행되어 스스로 철거된다. 도장만 찍어도 진행이 되어야 스톨이 없다.
+  if (r.cls.stampDecay && r.stamps.length) {
+    let k = 0;
+    for (const pt of r.stamps) {
+      if (!pt.alive) continue;
+      const res = damagePart(b, pt, r.cls.stampDecay * DT);
+      if (res.lift) b.topY -= res.lift;
+      for (const e of res.emits) r.drops.push({ kind: e.kind, x: e.x, y: e.y, vy: TUNE.dropVy0, alive: true });
+      k += res.killed;
+    }
+    r.stamps = r.stamps.filter((pt) => pt.alive);
+    if (k) { onFloorsDown(r, k); checkTopple(r); }
+  }
+  // 부녀회장은 가드가 곧 공격이다
+  if (r.guarding && r.cls.guardDps && b.alive) {
+    r.noiseAcc = (r.noiseAcc || 0) + r.cls.guardDps * DT;
+    if (r.noiseAcc >= 1) {
+      r.noiseAcc -= 1;
+      const cw3 = b.cellW;
+      let k = 0;
+      for (const xx of [r.x - cw3, r.x, r.x + cw3]) {
+        const t3 = partAtBlade(b, xx, bladeY(r), reachOf(r));
+        if (t3) k += applyPart(r, b, t3, 1);
+      }
+      if (k) { onFloorsDown(r, k); checkTopple(r); }
+    }
+  }
+
+  let stall = 1 + TUNE.timeRamp * r.t; // 시간 압박
+  if (r.trainer && r.trainer.fallMul) stall *= r.trainer.fallMul;
+  const hovering = r.t < r.hoverUntil || (r.trainer && r.trainer.freeze);
+  if (!frozen(r) && !hovering) b.topY += b.speed * stall * tiltMul(b) * DT;
+  if (r.contactCd > 0) r.contactCd -= DT;
+  if (r.headCd > 0) r.headCd -= DT;
+  // 공중 인터셉트: 머리 접촉
+  if (b.alive && airborne(r) && r.headCd <= 0 && bottomOf(b) >= contactY(r)) {
+    r.headCd = TUNE.contactCd;
+    resolveHeadContact(r);
+  }
+  // 실패 조건: 지면 접촉
+  if (b.alive && r.contactCd <= 0 && bottomOf(b) >= FIELD.GROUND_Y) {
+    r.contactCd = TUNE.contactCd;
+    resolveContact(r);
+  }
+  if (r.over) return;
+
+  // 낙하물(화산재·캔) 갱신
+  for (const d of r.drops) {
+    if (!d.alive) continue;
+    d.vy += TUNE.dropGravity * DT;
+    d.y += d.vy * DT;
+    const near = Math.abs(d.x - r.x) < TUNE.catchRange;
+    if (d.kind === 'can' && near && d.y >= feetY(r) - TUNE.playerH - 24 && d.y <= feetY(r) + 24) {
+      d.alive = false; r.catches += 1;
+      r.special = Math.min(r.special + TUNE.canCharge, TUNE.specialMax);
+      r.score += TUNE.canScore;
+      continue;
+    }
+    if (d.y >= FIELD.GROUND_Y) {
+      d.alive = false;
+      if (d.kind === 'can') {           // 착지 지점에 서 있으면 받은 것으로 인정
+        if (near) {
+          r.catches += 1;
+          r.special = Math.min(r.special + TUNE.canCharge, TUNE.specialMax);
+          r.score += TUNE.canScore;
+        }
+      } else {                          // 화산재는 놓치면 손해
+        r.ashHits += 1;
+        r.guard = Math.max(0, r.guard - TUNE.ashGuardLoss);
+        breakCombo(r);
+      }
+    }
+  }
+  if (r.drops.length > 40) r.drops = r.drops.filter((d) => d.alive);
+
+  // 막판 기울기 폭발은 판정에서 제외한다 (붕괴 게이트와 동일 기준)
+  if (b.alive && aliveParts(b).length >= b.parts.length * TUNE.toppleMinMass) {
+    r.peakTilt = Math.max(r.peakTilt, Math.abs(tiltOf(b)));
+  }
+
+  // 다음 건물
+  if (!b.alive) {
+    // 기울기를 억제한 채 완파하면 정밀 철거 수당
+    if (!b.toppled && r.peakTilt <= TUNE.cleanTiltMax) {
+      r.cleanClears += 1;
+      r.score += TUNE.cleanBonus;
+      r.lastMove = { kind: 'bonus', name: '정밀 철거 수당 지급', t: r.t };
+    }
+    r.peakTilt = 0;
+    r.stamps = []; r.wards = []; r.flying = [];
+    r.buildingsCleared += 1;
+    r.building = makeBuilding(b.index + 1, r.rng);
+    r.drops = r.drops.filter((d) => d.alive);
+  }
+}
+
+// 현재 실효 낙하 속도. 봇이 접촉 시각을 정확히 계산하려면 이 값이 필요하다.
+function fallSpeedOf(r) {
+  let stall = 1 + TUNE.timeRamp * r.t;
+  if (r.trainer && r.trainer.fallMul) stall *= r.trainer.fallMul;
+  return r.building.speed * stall * tiltMul(r.building);
+}
+const timeToGroundHit = (r) => {
+  const v = fallSpeedOf(r);
+  return v > 0 ? (FIELD.GROUND_Y - bottomOf(r.building)) / v : Infinity;
+};
+
+
+
+// ══ render/game.js ══
+
+// 메타 진행 (세션 메모리). GitHub Pages 배포 시 이 객체만 localStorage에 담으면 영구 진행.
+// 트레이너 모드 — 컨셉 검증용. 전 클래스·전 기술·전 특성 해금.
+const meta = {
+  scrap: 99999,
+  classes: new Set(CLASS_IDS),
+  skills: new Set(SKILL_IDS),
+  traits: new Set(Object.keys(TRAITS)),
+  bestScore: 0, bestCombo: 0,
+};
+const trainer = { infiniteLives: false, fallMul: 1, freeze: false };
+const slots = () => (meta.traits.has('slot4') ? 4 : 3);
+
+let screen = 'lobby';
+let pickedClass = 'chulgeo';
+let loadout = [];
+let run = null;
+let paused = false;
+let last = null;
+const keys = {};
+let swing = 0;            // 공격 모션 잔여시간
+let chargeT = 0;          // X 홀드 시간
+const tapT = { ArrowLeft: -9, ArrowRight: -9 }; // 더블탭 판정
+let now = 0;
+
+const $ = (s) => document.querySelector(s);
+const lobby = $('#lobby');
+const canvas = $('#board');
+const ctx = canvas.getContext('2d');
+
+// ── 로비 ─────────────────────────────────────────────────
+function buy(kind, id, cost) {
+  if (meta.scrap < cost) return;
+  meta.scrap -= cost;
+  meta[kind].add(id);
+  renderLobby();
+}
+function toggle(id) {
+  const i = loadout.indexOf(id);
+  if (i >= 0) loadout.splice(i, 1);
+  else if (loadout.length < slots()) loadout.push(id);
+  renderLobby();
+}
+const locked = (id) => { const s = SKILLS[id]; return s.prereq ? !meta.skills.has(s.prereq) : false; };
+
+function renderLobby() {
+  loadout = loadout.filter((id) => meta.skills.has(id)).slice(0, slots());
+  if (!meta.classes.has(pickedClass)) pickedClass = 'chulgeo';
+  const branches = ['타수', '점프', '가드', '콤보'];
+
+  lobby.innerHTML = `
+    <header class="bar">
+      <div class="stamp">낙하공사</div>
+      <div class="ledger">
+        <span class="k">고철</span><span class="v">${meta.scrap}</span>
+        <span class="k">최고 점수</span><span class="v">${meta.bestScore.toLocaleString()}</span>
+        <span class="k">최고 콤보</span><span class="v">${meta.bestCombo}</span>
+      </div>
+    </header>
+    <p class="notice">본 철거는 관계 법령에 따라 진행되지 않습니다. 건물 내부는 전부 공가입니다.</p>
+
+    <section><h2>철거 담당</h2>
+      <div class="grid classes">${CLASS_IDS.map((id) => {
+        const c = CLASSES[id], own = meta.classes.has(id);
+        return `<button class="card ${pickedClass === id ? 'on' : ''}" data-a="${own ? 'pick' : 'bc'}" data-i="${id}">
+          <b>${c.name}</b><span class="w">${c.weapon}</span>
+          <span class="lim">깨는 기둥 · ${c.breaks}</span>
+          <span class="how">${c.how}</span>
+          <span class="tip">${c.tip}</span>
+          ${own ? '' : `<span class="price">고철 ${CLASS_COST[id]}</span>`}</button>`;
+      }).join('')}</div></section>
+
+    <section><h2>기술 <em>· 패시브. 하위 기술을 먼저 배워야 합니다</em></h2>
+      <div class="grid tree">${branches.map((br) => `<div class="branch">
+        <div class="bh">${br}</div>
+        ${SKILL_IDS.filter((i) => SKILLS[i].branch === br).map((id) => {
+          const s = SKILLS[id], own = meta.skills.has(id), lk = locked(id), on = loadout.includes(id);
+          return `<button class="node ${own ? 'own' : ''} ${on ? 'on' : ''}" data-a="${own ? 'tg' : 'bs'}" data-i="${id}" ${lk ? 'disabled' : ''}>
+            <b>${s.name}</b><span class="d">${s.desc}</span>
+            <span class="price">${own ? (on ? '편성됨' : '미편성') : `고철 ${s.cost}`}</span></button>`;
+        }).join('')}</div>`).join('')}</div></section>
+
+    <section><h2>특성 <em>· 영구 적용</em></h2>
+      <div class="grid traits">${Object.values(TRAITS).map((t) => {
+        const own = meta.traits.has(t.id);
+        return `<button class="chip ${own ? 'own' : ''}" data-a="bt" data-i="${t.id}">
+          <b>${t.name}</b><span class="d">${t.desc}</span>
+          <span class="price">${own ? '적용중' : `고철 ${t.cost}`}</span></button>`;
+      }).join('')}</div></section>
+
+    <footer class="go">
+      <div class="slotrow">${Array.from({ length: slots() }, (_, i) => {
+        const id = loadout[i];
+        return `<div class="slot ${id ? 'f' : ''}">${id ? SKILLS[id].name : '비어 있음'}</div>`;
+      }).join('')}</div>
+      <button class="start" data-a="go">착공</button>
+    </footer>
+    <section><h2>트레이너 <em>· 컨셉 검증용. 전 항목 해금 상태</em></h2>
+      <div class="grid traits">
+        <button class="chip ${trainer.infiniteLives ? 'own' : ''}" data-a="tr" data-i="lives">
+          <b>무한 라이프</b><span class="d">깔려도 죽지 않음</span>
+          <span class="price">${trainer.infiniteLives ? '켜짐' : '꺼짐'}</span></button>
+        <button class="chip" data-a="tr" data-i="fall">
+          <b>낙하 속도</b><span class="d">전체 낙하 배율</span>
+          <span class="price">${trainer.fallMul.toFixed(2)}배 — 눌러서 순환</span></button>
+        <button class="chip ${trainer.freeze ? 'own' : ''}" data-a="tr" data-i="freeze">
+          <b>낙하 정지</b><span class="d">물체가 내려오지 않음. 커맨드 연습용</span>
+          <span class="price">${trainer.freeze ? '켜짐' : '꺼짐'}</span></button>
+      </div></section>
+
+    <section><h2>커맨드</h2>
+      <table class="cmd">
+        <tr><td><kbd>Z</kbd></td><td>약베기</td><td>기본. 연타 가능</td></tr>
+        <tr><td><kbd>Z</kbd><kbd>Z</kbd><kbd>Z</kbd></td><td>3단 마무리</td><td>3타째가 강판정 + 2칸 동시. 0.45초 안에 이어야 함</td></tr>
+        <tr><td><kbd>↑</kbd>+<kbd>Z</kbd></td><td>올려베기</td><td>리치 +2층. 경직 큼</td></tr>
+        <tr><td><kbd>↓</kbd>+<kbd>Z</kbd> <small>(공중)</small></td><td>내려찍기</td><td>낙하 가속 + 착지 시 3칸 충격파</td></tr>
+        <tr><td><kbd>←←</kbd>/<kbd>→→</kbd></td><td>돌진 베기</td><td>이동과 공격을 동시에</td></tr>
+        <tr><td><kbd>X</kbd> 홀드→릴리즈</td><td>차지 강타</td><td>3칸 동시. 길게 모을수록 강함</td></tr>
+        <tr><td><kbd>↓</kbd> <small>접촉 직전</small></td><td>저스트 가드</td><td>게이지 소모 0 + 필살기 대량 충전 + 크게 띄움</td></tr>
+        <tr><td><kbd>C</kbd></td><td>필살기</td><td>게이지 만충 시</td></tr>
+      </table>
+      <p class="hint">← → 이동 · ↑ 점프 · ↓ 가드 · Space 일시정지 · Esc 철수</p>
+    </section>
+
+    <p class="hint">접촉 순간 <b>공중에서 가드하면 콤보 유지</b>, 지면이면 끊깁니다.</p>
+    <p class="hint"><b>하중 구조:</b> 좌·우 칸을 부수면 건물이 그쪽으로 기웁니다. 기울면 낙하가 빨라지고,
+    한계를 넘으면 그 방향으로 <b>측면 붕괴</b> — 남은 층이 한 번에 무너지지만 그 자리에 서 있으면 깔립니다.
+    중앙 칸은 기둥이라 단단하지만 균형에 영향이 없습니다.</p>
+  `;
+}
+lobby.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const { a, i } = b.dataset;
+  if (a === 'pick') { pickedClass = i; renderLobby(); }
+  if (a === 'bc') buy('classes', i, CLASS_COST[i]);
+  if (a === 'bs') buy('skills', i, SKILLS[i].cost);
+  if (a === 'bt') buy('traits', i, TRAITS[i].cost);
+  if (a === 'tg') toggle(i);
+  if (a === 'tr') {
+    if (i === 'lives') trainer.infiniteLives = !trainer.infiniteLives;
+    if (i === 'fall') trainer.fallMul = trainer.fallMul >= 1.5 ? 0.25 : Math.round((trainer.fallMul + 0.25) * 100) / 100;
+    if (i === 'freeze') trainer.freeze = !trainer.freeze;
+    renderLobby();
+  }
+  if (a === 'go') start();
+});
+
+function start() {
+  fx.parts.length = 0; fx.slashes.length = 0; fx.pops.length = 0;
+  fx.shake = 0; fx.flash = null; fx.special = null; fx.topple = null; prevStat = null; chargeT = 0;
+  run = createRun({ seed: (Math.random() * 1e9) | 0, classId: pickedClass, skills: loadout.slice(), traits: [...meta.traits], trainer: { ...trainer } });
+  screen = 'run'; paused = false;
+  lobby.hidden = true; canvas.hidden = false; canvas.focus();
+}
+function finish() {
+  meta.scrap += Math.floor(run.scrap);
+  meta.bestScore = Math.max(meta.bestScore, run.score);
+  meta.bestCombo = Math.max(meta.bestCombo, run.maxCombo);
+  last = { score: run.score, combo: run.maxCombo, buildings: run.buildingsCleared, scrap: Math.floor(run.scrap), mins: run.t / 60 };
+  screen = 'result';
+}
+function back() { screen = 'lobby'; run = null; canvas.hidden = true; lobby.hidden = false; renderLobby(); }
+
+// ── 입력 ─────────────────────────────────────────────────
+window.addEventListener('keydown', (e) => {
+  if (screen === 'result') { back(); return; }
+  if (screen !== 'run') return;
+  if (keys[e.code]) { e.preventDefault(); return; }
+  keys[e.code] = true;
+  if (e.code === 'Space') { paused = !paused; e.preventDefault(); return; }
+  if (e.code === 'Escape') { finish(); return; }
+  if (paused) return;
+  if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+    const dir = e.code === 'ArrowLeft' ? -1 : 1;
+    if (now - tapT[e.code] < 0.26 && !airborne(run)) {   // 더블탭 → 돌진 베기
+      if (dashAttack(run, dir)) { swing = 0.12; slashFx('dash'); }
+    }
+    tapT[e.code] = now;
+    setMove(run, dir);
+  }
+  if (e.code === 'ArrowUp') jump(run);
+  if (e.code === 'KeyZ') {
+    const kind = keys.ArrowUp && !airborne(run) ? 'upper'
+      : keys.ArrowDown && airborne(run) ? 'dive' : 'light';
+    if (attack(run, kind)) { swing = kind === 'light' ? 0.1 : 0.16; slashFx(kind); }
+  }
+  if (e.code === 'KeyX') {
+    const st = run.cls.style;
+    if (st === 'stamp' || st === 'talisman') { // 즉발 — 모아둔 것을 터뜨린다
+      if (heavyAction(run)) { swing = 0.2; slashFx('charge'); }
+    }
+  }
+  if (e.code === 'KeyC') useSpecial(run);
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyZ', 'KeyX', 'KeyC'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+  if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && screen === 'run' && run) {
+    setMove(run, keys.ArrowLeft ? -1 : keys.ArrowRight ? 1 : 0);
+  }
+  // X 릴리즈 — 차지가 성립했으면 차지 강타
+  if (e.code === 'KeyX' && screen === 'run' && run && !paused) {
+    const st = run.cls.style;
+    if ((st === 'melee' || st === 'noise') && chargeT >= 0.25) {
+      const power = 1 + Math.min((chargeT - 0.25) / 0.65, 1) * 1.6; // 1.0 ~ 2.6배
+      if (heavyAction(run, power)) { swing = 0.2; slashFx('charge'); }
+    }
+    chargeT = 0;
+  }
+});
+canvas.addEventListener('mousedown', () => { if (screen === 'result') back(); });
+window.addEventListener('blur', () => { if (screen === 'run') paused = true; });
+
+// ── 이펙트 (렌더 전용) ───────────────────────────────────
+const fx = { parts: [], slashes: [], pops: [], shake: 0, flash: null, special: null, topple: null };
+let prevStat = null;
+
+function spawnDebris(x, y, n, col) {
+  for (let i = 0; i < n; i++) {
+    fx.parts.push({
+      x, y, col,
+      vx: (Math.random() - 0.5) * 320, vy: -Math.random() * 260 - 40,
+      s: 4 + Math.random() * 7, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, life: 1,
+    });
+  }
+}
+function updateFx(dt) {
+  for (const p of fx.parts) { p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.life -= dt * 0.8; }
+  fx.parts = fx.parts.filter((p) => p.life > 0 && p.y < FIELD.H + 40);
+  if (fx.parts.length > 260) fx.parts.splice(0, fx.parts.length - 260);
+  for (const a of fx.slashes) a.life -= dt * 5.5;
+  fx.slashes = fx.slashes.filter((a) => a.life > 0);
+  for (const t of fx.pops) { t.life -= dt * 1.6; t.y -= 44 * dt; }
+  fx.pops = fx.pops.filter((t) => t.life > 0);
+  fx.shake = Math.max(0, fx.shake - dt * 34);
+  if (fx.flash) { fx.flash.life -= dt * 3.4; if (fx.flash.life <= 0) fx.flash = null; }
+  if (fx.special) { fx.special.life -= dt * 1.25; if (fx.special.life <= 0) fx.special = null; }
+  if (fx.topple) { fx.topple.life -= dt * 1.15; if (fx.topple.life <= 0) fx.topple = null; }
+}
+function drawParticles() {
+  for (const p of fx.parts) {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.globalAlpha = Math.min(1, p.life); ctx.fillStyle = p.col;
+    ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s);
+    ctx.strokeStyle = 'rgba(20,26,29,.5)'; ctx.lineWidth = 1;
+    ctx.strokeRect(-p.s / 2, -p.s / 2, p.s, p.s);
+    ctx.restore();
+  }
+  for (const a of fx.slashes) {
+    ctx.save(); ctx.globalAlpha = a.life; ctx.strokeStyle = '#FFF6DA';
+    ctx.lineWidth = 3 + a.life * 7; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(a.x, a.y, a.r, -2.5, -0.4); ctx.stroke();
+    ctx.globalAlpha = a.life * 0.45; ctx.strokeStyle = C.hazard; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(a.x, a.y, a.r + 9, -2.4, -0.5); ctx.stroke();
+    ctx.restore();
+  }
+  for (const t of fx.pops) {
+    ctx.save(); ctx.globalAlpha = Math.min(1, t.life);
+    ctx.textAlign = 'center'; ctx.font = `700 ${t.size}px "Black Han Sans", sans-serif`;
+    ctx.lineWidth = 5; ctx.strokeStyle = C.ink; ctx.strokeText(t.txt, t.x, t.y);
+    ctx.fillStyle = t.col; ctx.fillText(t.txt, t.x, t.y); ctx.restore();
+  }
+}
+// 클래스별 필살기 연출
+function drawTopple() {
+  const tp = fx.topple; if (!tp) return;
+  const k = 1 - tp.life;
+  const h = tp.floors * FIELD.FLOOR_H, w = FIELD.CELL_W * 3;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, tp.life * 1.3);
+  ctx.translate(FIELD.POS_X[1] + tp.dir * w * 0.28, FIELD.GROUND_Y);
+  ctx.rotate(tp.dir * (Math.PI / 2) * Math.min(k * 1.5, 1));
+  ctx.fillStyle = '#5A5348';
+  ctx.fillRect(-w / 2, -h, w, h);
+  ctx.strokeStyle = '#8C8577'; ctx.lineWidth = 2;
+  for (let i = 1; i < tp.floors; i++) {
+    ctx.beginPath(); ctx.moveTo(-w / 2, -i * FIELD.FLOOR_H); ctx.lineTo(w / 2, -i * FIELD.FLOOR_H); ctx.stroke();
+  }
+  ctx.strokeRect(-w / 2, -h, w, h);
+  ctx.restore();
+}
+
+function drawSpecial() {
+  const sp = fx.special; if (!sp) return;
+  const k = 1 - sp.life, a = sp.life;
+  ctx.save();
+  if (sp.kind === 'wipe') { // 전멸 — 지면에서 치솟는 발파 섬광
+    ctx.globalAlpha = a * 0.85;
+    const g = ctx.createLinearGradient(0, FIELD.GROUND_Y, 0, FIELD.GROUND_Y - 700 * k);
+    g.addColorStop(0, '#FFF3C4'); g.addColorStop(0.45, C.vest); g.addColorStop(1, 'rgba(192,32,44,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, FIELD.GROUND_Y - 700 * k, FIELD.W, 700 * k);
+    ctx.globalAlpha = a; ctx.strokeStyle = '#FFF6DA'; ctx.lineWidth = 6;
+    for (let i = 0; i < 7; i++) {
+      const x = 70 + i * 140;
+      ctx.beginPath(); ctx.moveTo(x, FIELD.GROUND_Y); ctx.lineTo(x + (i % 2 ? 26 : -26), FIELD.GROUND_Y - 620 * k); ctx.stroke();
+    }
+  } else if (sp.kind === 'ward') { // 결계 — 부적 파동
+    ctx.globalAlpha = a * 0.9; ctx.strokeStyle = C.hazard;
+    for (let i = 0; i < 4; i++) {
+      ctx.lineWidth = 5 - i; ctx.beginPath();
+      ctx.arc(FIELD.W / 2, FIELD.GROUND_Y - 120, 60 + k * 620 - i * 44, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = a; ctx.fillStyle = C.banner;
+    for (let i = 0; i < 9; i++) {
+      const ang = (i / 9) * Math.PI * 2 + k * 3, rr = 90 + k * 330;
+      ctx.save();
+      ctx.translate(FIELD.W / 2 + Math.cos(ang) * rr, FIELD.GROUND_Y - 120 + Math.sin(ang) * rr * 0.6);
+      ctx.rotate(ang); ctx.fillRect(-9, -16, 18, 32); ctx.restore();
+    }
+  } else { // 정지 — 청색 결빙 + 격자 확장
+    ctx.globalAlpha = a * 0.5; ctx.fillStyle = '#8FD3E8'; ctx.fillRect(0, 0, FIELD.W, FIELD.H);
+    ctx.globalAlpha = a; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2;
+    for (let i = 0; i < 26; i++) {
+      const x = (i * 97) % FIELD.W, y = (i * 151) % FIELD.GROUND_Y, r2 = 8 + k * 40;
+      ctx.beginPath(); ctx.moveTo(x - r2, y); ctx.lineTo(x + r2, y);
+      ctx.moveTo(x, y - r2); ctx.lineTo(x, y + r2); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = Math.min(1, a * 1.4);
+  ctx.textAlign = 'center'; ctx.font = '700 46px "Black Han Sans", sans-serif';
+  ctx.lineWidth = 7; ctx.strokeStyle = C.ink; ctx.strokeText(sp.label, FIELD.W / 2, 150);
+  ctx.fillStyle = C.hazard; ctx.fillText(sp.label, FIELD.W / 2, 150);
+  ctx.restore();
+}
+
+function slashFx(kind = 'light') {
+  const x = run.x, y = bladeY(run) - 14;
+  const spec = {
+    light:  { r: 34, n: 1 }, combo3: { r: 54, n: 3 }, upper: { r: 46, n: 2 },
+    dive:   { r: 40, n: 2 }, dash:   { r: 44, n: 2 }, charge: { r: 72, n: 4 },
+  }[kind] || { r: 34, n: 1 };
+  for (let i = 0; i < spec.n; i++) fx.slashes.push({ x, y: y - i * 9, r: spec.r - i * 5, life: 1 });
+}
+
+// 엔진 카운터를 diff 해서 이펙트를 유발한다. logic은 렌더를 모른다.
+function emitFx() {
+  const r = run;
+  const cur = { fl: aliveParts(r.building).length, fd: r.floorsDestroyed, jg: r.jumpGuards, gg: r.groundGuards, cr: r.crushes,
+    sp: r.specialUses, cb: r.combo, ju: r.justGuards, tp: r.topples, td: r.toppleDeaths };
+  if (!prevStat) { prevStat = cur; return; }
+  const px = r.x;
+  if (cur.fd > prevStat.fd) {
+    const n = cur.fd - prevStat.fd;
+    for (let i = 0; i < Math.min(n, 6); i++) {
+      spawnDebris(r.x + (i - 1) * 90 + (Math.random() - 0.5) * 90, bottomOf(r.building) - 10, 7, ['#8C8577', '#C9C0AC', '#4C5B63'][i % 3]);
+    }
+    fx.shake = Math.min(fx.shake + 4 + n * 2, 16);
+    if (cur.cb > 0 && cur.cb % 10 === 0) fx.pops.push({ txt: `${cur.cb}연타`, x: px, y: bladeY(r) - 60, size: 30, col: C.vest, life: 1 });
+  }
+  if (cur.ju > prevStat.ju) {
+    fx.pops.push({ txt: '저스트 가드!', x: px, y: bladeY(r) - 56, size: 34, col: '#FFF6DA', life: 1 });
+    fx.flash = { life: 1, col: 'rgba(255,246,218,.42)' };
+    spawnDebris(px, bladeY(r) - 10, 10, C.hazard); fx.shake = Math.min(fx.shake + 6, 14);
+  } else if (cur.jg > prevStat.jg) {
+    fx.pops.push({ txt: '점프가드', x: px, y: bladeY(r) - 46, size: 22, col: C.hazard, life: 1 });
+    spawnDebris(px, bladeY(r) - 10, 4, C.hazard); fx.shake = Math.min(fx.shake + 3, 12);
+  }
+  if (cur.gg > prevStat.gg) {
+    fx.pops.push({ txt: '지면가드 · 콤보 끊김', x: px, y: bladeY(r) - 46, size: 20, col: C.dust, life: 1 });
+    fx.shake = Math.min(fx.shake + 8, 18);
+  }
+  if (cur.cr > prevStat.cr) {
+    fx.flash = { life: 1, col: 'rgba(192,32,44,.55)' };
+    fx.shake = 26; spawnDebris(px, FIELD.GROUND_Y - 20, 22, C.banner);
+    fx.pops.push({ txt: '깔림', x: px, y: FIELD.GROUND_Y - 110, size: 42, col: C.banner, life: 1 });
+  }
+  if (cur.tp > prevStat.tp) {
+    const dir = r.building.toppled || 1;
+    fx.topple = { dir, life: 1, floors: Math.max(2, Math.round((prevStat.fl || 8) / 3)) };
+    fx.shake = 24;
+    fx.pops.push({ txt: dir > 0 ? '우측 붕괴!' : '좌측 붕괴!', x: FIELD.W / 2, y: 300, size: 46, col: C.vest, life: 1 });
+    for (let i = 0; i < 5; i++) spawnDebris((dir > 0 ? OBJ_LEFT + OBJ_W : OBJ_LEFT) + (Math.random() - .5) * 200, FIELD.GROUND_Y - 60, 10, ['#8C8577', '#C9C0AC', '#4C5B63'][i % 3]);
+  }
+  if (cur.td > prevStat.td) {
+    fx.flash = { life: 1, col: 'rgba(192,32,44,.6)' };
+    fx.pops.push({ txt: '붕괴에 깔림', x: px, y: FIELD.GROUND_Y - 120, size: 40, col: C.banner, life: 1 });
+  }
+  if (cur.sp > prevStat.sp) {
+    const kind = r.cls.special;
+    fx.special = { kind, life: 1, label: kind === 'wipe' ? '일괄 발파' : kind === 'ward' ? '부적 결계' : '집단 민원 접수' };
+    fx.shake = 22; fx.flash = { life: 1, col: 'rgba(255,246,218,.5)' };
+  }
+  prevStat = cur;
+}
+
+// ── 팔레트 ───────────────────────────────────────────────
+const C = {
+  sky: '#16333F', grid: 'rgba(126,196,214,.13)', asphalt: '#23201C',
+  dust: '#CFC7B6', hazard: '#F2C230', vest: '#FF6A1A', banner: '#C0202C', ink: '#141A1D',
+};
+// 셀 HP를 색과 패턴으로 즉시 식별시킨다. 패턴 읽기가 실력축이므로 숫자만으로는 안 된다.
+const CELL = {
+  1: { fill: '#8C8577', line: '#B5AC9A', label: '낡음' },
+  2: { fill: '#C9C0AC', line: '#EFE7D3', label: '신축' },
+  3: { fill: '#4C5B63', line: '#8FA6B0', label: '석재' },
+};
+
+const CLOUDS = [{ x: 90, y: 90, s: 1.1 }, { x: 620, y: 62, s: .8 }, { x: 380, y: 168, s: .62 }, { x: 830, y: 138, s: .95 }];
+const SKYLINE = [];
+for (let i = 0, x = -30; x < FIELD.W + 60; i++) {
+  const w = 44 + ((i * 37) % 58), h = 90 + ((i * 71) % 170);
+  SKYLINE.push({ x, w, h, win: (i * 13) % 4 });
+  x += w + 8 + ((i * 19) % 16);
+}
+
+function drawSky() {
+  const g = ctx.createLinearGradient(0, 0, 0, FIELD.GROUND_Y);
+  g.addColorStop(0, '#0E2530'); g.addColorStop(.55, C.sky); g.addColorStop(1, '#22505F');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, FIELD.W, FIELD.H);
+  // 달
+  ctx.fillStyle = 'rgba(242,194,48,.16)'; ctx.beginPath(); ctx.arc(842, 84, 46, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,246,218,.82)'; ctx.beginPath(); ctx.arc(842, 84, 30, 0, Math.PI * 2); ctx.fill();
+  // 구름
+  ctx.fillStyle = 'rgba(207,199,182,.13)';
+  for (const c of CLOUDS) {
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, 62 * c.s, 20 * c.s, 0, 0, Math.PI * 2);
+    ctx.ellipse(c.x + 40 * c.s, c.y - 10 * c.s, 42 * c.s, 16 * c.s, 0, 0, Math.PI * 2);
+    ctx.ellipse(c.x - 42 * c.s, c.y + 5 * c.s, 34 * c.s, 13 * c.s, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // 원경 스카이라인 — 우리가 지켜야 하는 도시
+  for (const b of SKYLINE) {
+    const y = FIELD.GROUND_Y - b.h;
+    ctx.fillStyle = '#132B35'; ctx.fillRect(b.x, y, b.w, b.h);
+    ctx.fillStyle = 'rgba(242,194,48,.30)';
+    for (let wy = y + 12; wy < FIELD.GROUND_Y - 14; wy += 20) {
+      for (let wx = b.x + 7; wx < b.x + b.w - 9; wx += 15) {
+        if ((wx + wy + b.win * 7) % 43 < 13) ctx.fillRect(wx, wy, 6, 9);
+      }
+    }
+  }
+  ctx.strokeStyle = 'rgba(126,196,214,.08)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = 0; x <= FIELD.W; x += 40) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, FIELD.GROUND_Y); }
+  for (let y = 0; y <= FIELD.GROUND_Y; y += 40) { ctx.moveTo(0, y + .5); ctx.lineTo(FIELD.W, y + .5); }
+  ctx.stroke();
+  // 낙하물 열 가이드 — 연속 이동이므로 어디를 겨누는지 보여야 한다
+  if (run && run.building) {
+    const b = run.building;
+    ctx.strokeStyle = 'rgba(242,194,48,.07)'; ctx.beginPath();
+    for (let c = 0; c <= b.cols; c++) {
+      const x = OBJ_LEFT + c * b.cellW;
+      ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, FIELD.GROUND_Y);
+    }
+    ctx.stroke();
+    // 지금 겨누고 있는 열
+    const tgt = partAtBlade(b, run.x, bladeY(run), reachOf(run));
+    if (tgt) {
+      ctx.fillStyle = 'rgba(255,106,26,.10)';
+      ctx.fillRect(OBJ_LEFT + tgt.c * b.cellW, 0, b.cellW, FIELD.GROUND_Y);
+    }
+  }
+}
+
+function drawGround() {
+  const g = FIELD.GROUND_Y;
+  ctx.fillStyle = C.asphalt; ctx.fillRect(0, g, FIELD.W, FIELD.H - g);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, g, FIELD.W, 11); ctx.clip();
+  ctx.fillStyle = C.hazard; ctx.fillRect(0, g, FIELD.W, 11);
+  ctx.fillStyle = C.asphalt;
+  for (let x = -22; x < FIELD.W + 22; x += 22) {
+    ctx.beginPath(); ctx.moveTo(x, g + 11); ctx.lineTo(x + 11, g); ctx.lineTo(x + 22, g); ctx.lineTo(x + 11, g + 11); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// 파트 종류별 외형. 형태가 곧 물리 특성이므로 종류를 한눈에 읽혀야 한다.
+const SKIN = {
+  wall:   { fill: '#B9B0A0', line: '#E6DDC9' },
+  window: { fill: '#5E8FA3', line: '#A9D6E6' },
+  door:   { fill: '#6B5A45', line: '#C39A62' },
+  core:   { fill: '#7C8890', line: '#C2D0D8' },
+  roof:   { fill: '#B0453C', line: '#E88E7F' },
+  flesh:  { fill: '#C98C86', line: '#F0BDB4' },
+  rock:   { fill: '#6E6A60', line: '#A9A296' },
+  vent:   { fill: '#3A2C28', line: '#FF7A2A' },
+  slot:   { fill: '#2E5B7A', line: '#8FD3E8' },
+};
+
+// 같은 행에서 연속된 동일 종류를 한 덩어리로 묶는다.
+// 칸마다 따로 그리면 지붕이 작은 삼각형 여러 개가 된다.
+function runsOf(b) {
+  const live = aliveParts(b);
+  const byRow = new Map();
+  for (const p of live) {
+    if (!byRow.has(p.r)) byRow.set(p.r, []);
+    byRow.get(p.r).push(p);
+  }
+  const out = [];
+  for (const [r, arr] of byRow) {
+    arr.sort((a, z) => a.c - z.c);
+    let cur = null;
+    for (const p of arr) {
+      if (cur && p.kind === cur.kind && p.c === cur.c1 + 1) { cur.c1 = p.c; cur.parts.push(p); }
+      else { cur = { r, kind: p.kind, c0: p.c, c1: p.c, parts: [p] }; out.push(cur); }
+    }
+  }
+  return out;
+}
+
+// 지붕 덩어리는 전체를 하나의 큰 삼각형/사다리꼴로 그린다.
+function drawRoofRun(b, run_) {
+  const x0 = OBJ_LEFT + run_.c0 * b.cellW;
+  const w = (run_.c1 - run_.c0 + 1) * b.cellW;
+  const y = partTop(b, run_.parts[0]), h = FIELD.FLOOR_H;
+  // 아래에 같은 종류가 없으면 최상단 = 뾰족한 꼭대기
+  const hasBelow = b.parts.some((q) => q.alive && q.kind === 'roof' && q.r === run_.r + 1);
+  const sk = SKIN.roof;
+  ctx.fillStyle = sk.fill;
+  ctx.beginPath();
+  if (!hasBelow && w <= b.cellW * 1.2) { ctx.moveTo(x0 + w / 2, y); }
+  else { ctx.moveTo(x0 + w * 0.2, y); ctx.lineTo(x0 + w * 0.8, y); }
+  ctx.lineTo(x0 + w - 1, y + h - 1); ctx.lineTo(x0 + 1, y + h - 1);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = sk.line; ctx.lineWidth = 1.5; ctx.stroke();
+  // 기와 결
+  ctx.strokeStyle = 'rgba(20,26,29,.22)'; ctx.lineWidth = 1;
+  for (let k = 1; k < run_.parts.length * 3; k++) {
+    const xx = x0 + (w * k) / (run_.parts.length * 3);
+    ctx.beginPath(); ctx.moveTo(xx, y + h - 2); ctx.lineTo(x0 + w / 2 + (xx - x0 - w / 2) * 0.25, y + 3); ctx.stroke();
+  }
+  // 손상
+  const dmg = 1 - run_.parts.reduce((a, q) => a + q.hp, 0) / run_.parts.reduce((a, q) => a + q.maxHp, 0);
+  if (dmg > 0.05) {
+    ctx.strokeStyle = `rgba(20,26,29,${(0.3 + dmg * 0.5).toFixed(2)})`; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x0 + w * 0.3, y + h * 0.3); ctx.lineTo(x0 + w * 0.5, y + h * 0.7);
+    ctx.lineTo(x0 + w * 0.42, y + h - 3); ctx.stroke();
+  }
+}
+
+// 벽·살점·암반 덩어리는 이어진 하나의 면으로 그린다 (칸 경계선 없음)
+function drawSolidRun(b, run_) {
+  const x0 = OBJ_LEFT + run_.c0 * b.cellW;
+  const w = (run_.c1 - run_.c0 + 1) * b.cellW;
+  const y = partTop(b, run_.parts[0]), h = FIELD.FLOOR_H;
+  const sk = SKIN[run_.kind] || SKIN.wall;
+  ctx.fillStyle = sk.fill;
+  if (run_.kind === 'flesh') { ctx.beginPath(); ctx.roundRect(x0 + 2, y + 1, w - 4, h - 3, 14); ctx.fill(); }
+  else if (run_.kind === 'rock') {
+    ctx.beginPath(); ctx.moveTo(x0 + 1, y + h - 1);
+    ctx.lineTo(x0 + w * 0.18, y + 4); ctx.lineTo(x0 + w * 0.55, y + 9);
+    ctx.lineTo(x0 + w * 0.8, y + 3); ctx.lineTo(x0 + w - 1, y + h - 1);
+    ctx.closePath(); ctx.fill();
+  } else ctx.fillRect(x0 + 2, y + 1, w - 4, h - 3);
+  ctx.strokeStyle = sk.line; ctx.lineWidth = 1.5;
+  ctx.strokeRect(x0 + 1.5, y + 1.5, w - 3, h - 4);
+  // 덩어리 내부 칸 구분은 옅은 선으로만
+  ctx.strokeStyle = 'rgba(20,26,29,.14)'; ctx.lineWidth = 1;
+  for (let k = 1; k < run_.parts.length; k++) {
+    const xx = x0 + k * b.cellW;
+    ctx.beginPath(); ctx.moveTo(xx, y + 5); ctx.lineTo(xx, y + h - 6); ctx.stroke();
+  }
+  const dmg = 1 - run_.parts.reduce((a, q) => a + q.hp, 0) / run_.parts.reduce((a, q) => a + q.maxHp, 0);
+  if (dmg > 0.05) {
+    ctx.strokeStyle = `rgba(20,26,29,${(0.25 + dmg * 0.5).toFixed(2)})`; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (const q of run_.parts) {
+      if (q.hp >= q.maxHp) continue;
+      const cx = OBJ_LEFT + (q.c + 0.5) * b.cellW;
+      ctx.moveTo(cx - b.cellW * 0.2, y + h * 0.22);
+      ctx.lineTo(cx + b.cellW * 0.1, y + h * 0.58);
+      ctx.lineTo(cx - b.cellW * 0.06, y + h * 0.85);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawPart(b, p) {
+  const w = b.cellW, h = FIELD.FLOOR_H;
+  const x = OBJ_LEFT + p.c * w, y = partTop(b, p);
+  const sk = SKIN[p.kind] || SKIN.wall;
+  const dmg = 1 - p.hp / p.maxHp;
+
+  ctx.fillStyle = sk.fill;
+  if (p.kind === 'roof') { // 지붕은 사다리꼴
+    ctx.beginPath(); ctx.moveTo(x + w * .16, y); ctx.lineTo(x + w * .84, y);
+    ctx.lineTo(x + w - 2, y + h - 2); ctx.lineTo(x + 2, y + h - 2); ctx.closePath(); ctx.fill();
+  } else if (p.kind === 'flesh') { // 동물은 둥글게
+    ctx.beginPath(); ctx.roundRect(x + 2, y + 1, w - 5, h - 3, 12); ctx.fill();
+  } else if (p.kind === 'rock') { // 암반은 각지게
+    ctx.beginPath(); ctx.moveTo(x + 2, y + h - 2); ctx.lineTo(x + w * .22, y + 3);
+    ctx.lineTo(x + w * .62, y + 8); ctx.lineTo(x + w - 3, y + h - 2); ctx.closePath(); ctx.fill();
+  } else {
+    ctx.fillRect(x + 2, y + 1, w - 5, h - 3);
+  }
+
+  if (p.kind === 'window') { // 유리 반사 + 금
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + 8, y + h - 8); ctx.lineTo(x + w - 12, y + 6); ctx.stroke();
+  }
+  if (p.kind === 'core') {
+    ctx.strokeStyle = 'rgba(20,26,29,.35)'; ctx.lineWidth = 2;
+    for (let k = 1; k < 3; k++) { const xx = x + (w * k) / 3; ctx.beginPath(); ctx.moveTo(xx, y + 3); ctx.lineTo(xx, y + h - 5); ctx.stroke(); }
+  }
+  if (p.kind === 'door') {
+    ctx.fillStyle = '#2B231B'; ctx.fillRect(x + w * .28, y + h * .25, w * .44, h * .72);
+  }
+  if (p.kind === 'vent') { // 분화구
+    ctx.fillStyle = '#FF7A2A'; ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + 9, w * .26, 7, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  if (p.kind === 'slot') { // 자판기 진열칸
+    ctx.fillStyle = '#D94F3D';
+    for (let k = 0; k < 3; k++) ctx.fillRect(x + 10 + k * (w - 26) / 3, y + 10, 12, 20);
+  }
+  // 손상 표시
+  if (dmg > 0.05) {
+    ctx.strokeStyle = `rgba(20,26,29,${(0.25 + dmg * 0.5).toFixed(2)})`; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w * .2, y + h * .2); ctx.lineTo(x + w * .45, y + h * .55);
+    ctx.lineTo(x + w * .3, y + h * .8);
+    if (dmg > 0.5) { ctx.moveTo(x + w * .6, y + 4); ctx.lineTo(x + w * .72, y + h * .6); }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = sk.line; ctx.lineWidth = 1;
+  ctx.strokeRect(x + 1.5, y + 1.5, w - 4, h - 4);
+}
+
+function drawBuilding(b) {
+  const tl = tiltOf(b), bot = bottomOf(b);
+  ctx.save();
+  if (tl) { // 무게중심이 쏠린 만큼 기운다
+    ctx.translate(FIELD.POS_X[1], bot);
+    ctx.rotate(tl * 0.34);
+    ctx.translate(-FIELD.POS_X[1], -bot);
+  }
+  const live = aliveParts(b);
+  const GROUPED = { roof: drawRoofRun, wall: drawSolidRun, flesh: drawSolidRun, rock: drawSolidRun };
+  for (const g of runsOf(b)) {
+    const fn = GROUPED[g.kind];
+    if (fn) fn(b, g);
+    else for (const p of g.parts) drawPart(b, p);
+  }
+  // 매입 도장 / 부착된 부적
+  for (const p of run.stamps) if (p.alive) {
+    const x = OBJ_LEFT + p.c * b.cellW, y = partTop(b, p);
+    ctx.fillStyle = 'rgba(192,32,44,.82)';
+    ctx.beginPath(); ctx.arc(x + b.cellW / 2, y + FIELD.FLOOR_H / 2, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#FFF6DA'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#FFF6DA'; ctx.font = '700 11px ui-sans-serif,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('매입', x + b.cellW / 2, y + FIELD.FLOOR_H / 2 + 1);
+  }
+  for (const w of run.wards) if (w.part.alive) {
+    const x = OBJ_LEFT + w.part.c * b.cellW, y = partTop(b, w.part);
+    ctx.save();
+    ctx.translate(x + b.cellW / 2, y + FIELD.FLOOR_H / 2);
+    ctx.fillStyle = '#EFE7D3'; ctx.fillRect(-9, -16, 18, 32);
+    ctx.strokeStyle = C.banner; ctx.lineWidth = 2; ctx.strokeRect(-9, -16, 18, 32);
+    ctx.fillStyle = C.banner; ctx.font = '700 13px ui-sans-serif,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('符', 0, 1);
+    ctx.restore();
+  }
+  // 최하단 줄 강조
+  let maxR = -1; for (const p of live) if (p.r > maxR) maxR = p.r;
+  ctx.strokeStyle = C.vest; ctx.lineWidth = 3;
+  for (const p of live) if (p.r === maxR) {
+    ctx.strokeRect(OBJ_LEFT + p.c * b.cellW + 1.5, partTop(b, p) + 1.5, b.cellW - 4, FIELD.FLOOR_H - 4);
+  }
+  ctx.restore();
+
+  // 이름표
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = '700 17px "Black Han Sans", sans-serif';
+  ctx.lineWidth = 5; ctx.strokeStyle = C.ink;
+  const ny = Math.max(26, b.topY - 12);
+  ctx.strokeText(`${b.def.name}`, FIELD.POS_X[1], ny);
+  ctx.fillStyle = C.hazard; ctx.fillText(`${b.def.name}`, FIELD.POS_X[1], ny);
+  ctx.font = '12px ui-sans-serif,sans-serif';
+  ctx.fillStyle = 'rgba(207,199,182,.72)';
+  ctx.fillText(b.def.quip, FIELD.POS_X[1], ny + 17);
+
+  // 접촉 예고선
+  const ttc = timeToContact(run);
+  if (ttc < 0.5) {
+    ctx.strokeStyle = ttc < 0.2 ? C.banner : C.vest;
+    ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+    ctx.beginPath(); ctx.moveTo(0, FIELD.GROUND_Y - 1); ctx.lineTo(FIELD.W, FIELD.GROUND_Y - 1); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawFlying() {
+  if (!run.flying || !run.flying.length) return;
+  for (const f of run.flying) {
+    if (!f.alive) continue;
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.rotate(Math.atan2(f.vy, f.vx) + Math.PI / 2 + Math.sin(run.t * 22) * 0.22);
+    ctx.globalAlpha = f.dud ? 0.5 : 1;
+    ctx.fillStyle = '#EFE7D3'; ctx.fillRect(-7, -13, 14, 26);
+    ctx.strokeStyle = f.dud ? 'rgba(207,199,182,.6)' : C.banner;
+    ctx.lineWidth = 2; ctx.strokeRect(-7, -13, 14, 26);
+    ctx.fillStyle = f.dud ? 'rgba(207,199,182,.6)' : C.banner;
+    ctx.font = '700 11px ui-sans-serif,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('符', 0, 1);
+    ctx.restore();
+    if (!f.dud) { // 궤적
+      ctx.strokeStyle = 'rgba(242,194,48,.25)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(f.x, f.y + 14); ctx.lineTo(f.x - f.vx * 0.05, f.y + 34); ctx.stroke();
+    }
+  }
+}
+
+function drawDrops() {
+  for (const d of run.drops) {
+    if (!d.alive) continue;
+    if (d.kind === 'ash') {
+      ctx.fillStyle = '#4A4038';
+      ctx.beginPath(); ctx.arc(d.x, d.y, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FF7A2A';
+      ctx.beginPath(); ctx.arc(d.x - 3, d.y - 3, 4, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.fillStyle = '#D94F3D'; ctx.fillRect(d.x - 8, d.y - 13, 16, 26);
+      ctx.fillStyle = '#EFE7D3'; ctx.fillRect(d.x - 8, d.y - 4, 16, 5);
+    }
+  }
+}
+
+function drawPlayer() {
+  const r = run, x = r.x, fy = feetY(r), by = bladeY(r);
+  const guard = r.guarding, air = airborne(r);
+  ctx.save();
+  if (invuln(r) && Math.floor(r.t * 20) % 2 === 0) ctx.globalAlpha = 0.4;
+  ctx.strokeStyle = C.vest; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  const hipY = fy - 22, headY = by + 4;
+  // 몸통
+  ctx.beginPath(); ctx.moveTo(x, hipY); ctx.lineTo(x, headY + 7); ctx.stroke();
+  // 다리
+  ctx.beginPath();
+  if (air) { ctx.moveTo(x, hipY); ctx.lineTo(x - 9, fy - 6); ctx.moveTo(x, hipY); ctx.lineTo(x + 10, fy - 8); }
+  else if (guard) { ctx.moveTo(x, hipY); ctx.lineTo(x - 11, fy); ctx.moveTo(x, hipY); ctx.lineTo(x + 11, fy); }
+  else { ctx.moveTo(x, hipY); ctx.lineTo(x - 7, fy); ctx.moveTo(x, hipY); ctx.lineTo(x + 7, fy); }
+  ctx.stroke();
+  // 머리 + 안전모
+  ctx.beginPath(); ctx.arc(x, headY, 7, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = C.hazard; ctx.beginPath(); ctx.arc(x, headY - 1, 8, Math.PI, 0); ctx.fill();
+  // 팔 / 무기 / 가드
+  ctx.strokeStyle = guard ? C.hazard : C.dust; ctx.lineWidth = 4;
+  ctx.beginPath();
+  if (guard) { // 가드 자세 — 위를 막는다
+    ctx.moveTo(x - 16, headY - 12); ctx.lineTo(x + 16, headY - 12);
+    ctx.moveTo(x - 10, headY + 2); ctx.lineTo(x - 16, headY - 12);
+    ctx.moveTo(x + 10, headY + 2); ctx.lineTo(x + 16, headY - 12);
+  } else if (swing > 0) { // 휘두르는 중 — 팔이 위로 뻗는다
+    const k = 1 - swing / 0.1;
+    ctx.moveTo(x, headY + 8); ctx.lineTo(x + 16 - k * 8, headY - 4 - k * 10);
+    ctx.moveTo(x + 16 - k * 8, headY - 4 - k * 10); ctx.lineTo(x + 6, headY - 22 - k * 16);
+  } else {
+    ctx.moveTo(x, headY + 8); ctx.lineTo(x + 12, headY + 2);
+    ctx.moveTo(x + 12, headY + 2); ctx.lineTo(x + 14, headY - 14);
+  }
+  ctx.stroke();
+  ctx.restore();
+  // 가드 성공 링
+  if (guard) {
+    ctx.strokeStyle = air ? C.hazard : 'rgba(207,199,182,.45)';
+    ctx.lineWidth = air ? 3 : 2;
+    ctx.beginPath(); ctx.arc(x, headY - 6, 30, Math.PI, 0); ctx.stroke();
+    if (air) {
+      ctx.fillStyle = C.hazard; ctx.font = '700 11px ui-sans-serif,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('점프가드 · 콤보 유지', x, headY - 42);
+    }
+  }
+}
+
+function bar(x, y, w, h, v, max, col, label) {
+  ctx.fillStyle = 'rgba(207,199,182,.18)'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = col; ctx.fillRect(x, y, w * Math.max(0, Math.min(v / max, 1)), h);
+  ctx.strokeStyle = 'rgba(207,199,182,.4)'; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+  ctx.fillStyle = C.dust; ctx.font = '10px ui-sans-serif,sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(label, x, y - 4);
+}
+
+// 좌우 여백에 커맨드를 상주시킨다. 서식은 정색, 내용은 부조리.
+const CMD_LEFT = [
+  ['Z', '약베기'], ['ZZZ', '3단 마무리'], ['↑Z', '올려베기'],
+  ['←← →→', '돌진 베기'], ['↑', '점프', '가드 전용'],
+  ['X 홀드', '차지 강타'], ['↓ 직전', '저스트 가드'], ['C', '필살기'],
+];
+function drawSidePanels() {
+  const r = run;
+  // 좌: 작업 지시서
+  ctx.save();
+  ctx.fillStyle = 'rgba(35,32,28,.72)'; ctx.fillRect(0, 60, 210, 330);
+  ctx.strokeStyle = C.hazard; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(210.5, 60); ctx.lineTo(210.5, 390); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = C.hazard; ctx.font = '700 14px "Black Han Sans", sans-serif';
+  ctx.fillText('작업 지시서', 16, 84);
+  ctx.fillStyle = 'rgba(207,199,182,.4)'; ctx.font = '9px ui-monospace, monospace';
+  ctx.fillText('제2026-철거-0417호 · ' + r.cls.weapon, 16, 98);
+  const heavy = { stamp: '일괄 철거', talisman: '원격 기폭', melee: '차지 강타', noise: '차지 강타' }[r.cls.style];
+  const rows2 = CMD_LEFT.map(([k, n, note]) => (k === 'X 홀드' ? [(r.cls.style === 'melee' || r.cls.style === 'noise') ? 'X 홀드' : 'X', heavy] : [k, n, note]));
+  rows2.forEach(([k, n, note], i) => {
+    const y = 124 + i * 32;
+    ctx.fillStyle = C.hazard; ctx.font = '700 11px ui-monospace, monospace';
+    ctx.fillText(k, 16, y);
+    ctx.fillStyle = C.dust; ctx.font = '12px ui-sans-serif, sans-serif';
+    ctx.fillText(n, 16, y + 14);
+    if (note) { ctx.fillStyle = 'rgba(207,199,182,.4)'; ctx.fillText(' · ' + note, 16 + ctx.measureText(n).width, y + 14); }
+  });
+  ctx.restore();
+
+  // 우: 현장 상황판
+  ctx.save();
+  const rx = FIELD.W - 210;
+  ctx.fillStyle = 'rgba(35,32,28,.72)'; ctx.fillRect(rx, 60, 210, 300);
+  ctx.strokeStyle = C.hazard; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(rx - .5, 60); ctx.lineTo(rx - .5, 360); ctx.stroke();
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.hazard; ctx.font = '700 14px "Black Han Sans", sans-serif';
+  ctx.fillText('현장 상황판', rx + 16, 84);
+  const rows = [
+    ['철거 대상', r.building.def.name],
+    ['분류', r.building.def.cat],
+    ['잔여 부재', aliveParts(r.building).length + '개'],
+    ['누적 철거', r.floorsDestroyed + '개'],
+    ['측면 붕괴', r.topples + '회'],
+    ['접수된 민원', r.minwon + '건'],
+    ['음료 회수', r.catches + '캔'],
+    ['화산재 유실', r.ashHits + '건'],
+    ['정밀 철거 수당', r.cleanClears + '회'],
+  ];
+  rows.forEach(([k, v], i) => {
+    const y = 116 + i * 28;
+    ctx.fillStyle = 'rgba(207,199,182,.5)'; ctx.font = '10px ui-sans-serif, sans-serif';
+    ctx.fillText(k, rx + 16, y);
+    ctx.fillStyle = C.dust; ctx.font = '700 14px ui-monospace, monospace';
+    ctx.fillText(String(v), rx + 16, y + 16);
+  });
+  ctx.fillStyle = 'rgba(207,199,182,.32)'; ctx.font = '9px ui-sans-serif, sans-serif';
+  ctx.fillText('본 서식은 효력이 없습니다', rx + 16, 348);
+  ctx.restore();
+}
+
+// 런 시작 직후 이 직업을 어떻게 다루는지 알려준다.
+function drawOpening() {
+  const r = run;
+  if (r.t > 5.5) return;
+  const a = r.t < 4 ? 1 : (5.5 - r.t) / 1.5;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.fillStyle = 'rgba(35,32,28,.88)';
+  ctx.fillRect(FIELD.W / 2 - 300, 404, 600, 96);
+  ctx.strokeStyle = C.hazard; ctx.lineWidth = 2;
+  ctx.strokeRect(FIELD.W / 2 - 300.5, 404.5, 600, 96);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = C.hazard; ctx.font = '700 17px "Black Han Sans", sans-serif';
+  ctx.fillText(r.cls.name + ' · ' + r.cls.weapon, FIELD.W / 2, 432);
+  ctx.fillStyle = C.dust; ctx.font = '13px ui-sans-serif, sans-serif';
+  ctx.fillText(r.cls.how, FIELD.W / 2, 458);
+  ctx.fillStyle = 'rgba(207,199,182,.62)'; ctx.font = '12px ui-sans-serif, sans-serif';
+  ctx.fillText(r.cls.tip, FIELD.W / 2, 480);
+  ctx.restore();
+}
+
+function drawHud() {
+  const r = run;
+  // 콤보 — 화면 중앙 대형
+  if (r.combo > 1) {
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 ${Math.min(52 + r.combo * 0.7, 108)}px "Black Han Sans", ui-sans-serif, sans-serif`;
+    ctx.lineWidth = 7; ctx.strokeStyle = C.ink;
+    ctx.strokeText(`${r.combo} 연타`, FIELD.W / 2, 210);
+    ctx.fillStyle = r.combo >= 50 ? C.vest : C.hazard;
+    ctx.fillText(`${r.combo} 연타`, FIELD.W / 2, 210);
+    ctx.restore();
+  }
+  // 하단 패널
+  ctx.fillStyle = 'rgba(35,32,28,.92)'; ctx.fillRect(0, FIELD.H - 62, FIELD.W, 62);
+  bar(18, FIELD.H - 30, 190, 13, r.guard, r.guardMax, C.hazard, '방어 게이지');
+  bar(226, FIELD.H - 30, 190, 13, r.special, TUNE.specialMax,
+    r.special >= TUNE.specialMax ? C.banner : C.vest,
+    r.special >= TUNE.specialMax ? '필살기 준비 — X' : '필살기');
+  // 하중 균형계
+  const t = tiltOf(r.building), lim = TUNE.tiltLimit;
+  const bx = 470, bw = 170;
+  ctx.fillStyle = 'rgba(207,199,182,.18)'; ctx.fillRect(bx, FIELD.H - 30, bw, 13);
+  ctx.fillStyle = Math.abs(t) >= lim * 0.8 ? C.banner : Math.abs(t) >= lim * 0.5 ? C.vest : C.hazard;
+  const cx = bx + bw / 2, half = (bw / 2) * Math.min(Math.abs(t) / lim, 1);
+  ctx.fillRect(t >= 0 ? cx : cx - half, FIELD.H - 30, half, 13);
+  ctx.strokeStyle = 'rgba(207,199,182,.4)'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx + .5, FIELD.H - 29.5, bw - 1, 13);
+  ctx.fillStyle = C.dust; ctx.fillRect(cx - 1, FIELD.H - 33, 2, 19);
+  ctx.font = '10px ui-sans-serif,sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(Math.abs(t) >= lim * 0.8 ? '하중 균형 — 붕괴 임박' : '하중 균형', bx, FIELD.H - 34);
+
+  // 클래스별 자원 표시
+  const st = r.cls.style;
+  if (st === 'stamp' || st === 'talisman') {
+    const n = st === 'stamp' ? r.stamps.filter((p) => p.alive).length
+      : r.wards.filter((w) => w.part.alive).length + r.flying.filter((f) => f.alive && !f.dud).length;
+    const max = st === 'stamp' ? r.cls.stampMax : r.cls.wardMax;
+    const ready = st === 'stamp' ? n >= r.cls.stampMin : n > 0;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(207,199,182,.5)'; ctx.font = '10px ui-sans-serif,sans-serif';
+    ctx.fillText(st === 'stamp' ? '매입 도장 (X 일괄 철거)' : '부착 부적 (X 원격 기폭)', 226, FIELD.H - 34);
+    for (let i = 0; i < max; i++) {
+      ctx.fillStyle = i < n ? (ready ? C.banner : C.hazard) : 'rgba(207,199,182,.18)';
+      ctx.fillRect(226 + i * 24, FIELD.H - 30, 19, 13);
+    }
+  }
+
+  // 라이프
+  ctx.textAlign = 'left';
+  for (let i = 0; i < r.lives; i++) {
+    ctx.fillStyle = C.banner; ctx.font = '20px ui-sans-serif,sans-serif';
+    ctx.fillText('\u2665', 672 + i * 24, FIELD.H - 18);
+  }
+  // 점수 / 건물
+  ctx.fillStyle = C.dust; ctx.textAlign = 'right';
+  ctx.font = '700 26px ui-monospace, monospace';
+  ctx.fillText(String(Math.floor(r.score)).padStart(8, '0'), FIELD.W - 18, FIELD.H - 16);
+  ctx.font = '11px ui-sans-serif,sans-serif';
+  ctx.fillStyle = 'rgba(207,199,182,.6)';
+  ctx.fillText(`${r.building.index}번째 건물 · 철거 완료 ${r.buildingsCleared}`, FIELD.W - 18, FIELD.H - 40);
+  // 공중에서 공격을 시도하면 알려준다
+  if (airborne(r) && keys.KeyZ) {
+    ctx.save(); ctx.textAlign = 'center';
+    ctx.font = '700 15px "Black Han Sans", sans-serif';
+    ctx.lineWidth = 4; ctx.strokeStyle = C.ink;
+    ctx.strokeText('공중에서는 벨 수 없다 — ↓ 가드', r.x, bladeY(r) - 54);
+    ctx.fillStyle = C.banner;
+    ctx.fillText('공중에서는 벨 수 없다 — ↓ 가드', r.x, bladeY(r) - 54);
+    ctx.restore();
+  }
+  // 인식된 커맨드
+  if (r.lastMove && r.t - r.lastMove.t < 0.75) {
+    const a = 1 - (r.t - r.lastMove.t) / 0.75;
+    ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center';
+    ctx.font = '700 21px "Black Han Sans", sans-serif';
+    ctx.lineWidth = 5; ctx.strokeStyle = C.ink;
+    ctx.strokeText(r.lastMove.name, r.x, bladeY(r) - 76);
+    ctx.fillStyle = r.lastMove.kind === 'just' ? '#FFF6DA' : C.dust;
+    ctx.fillText(r.lastMove.name, r.x, bladeY(r) - 76);
+    ctx.restore();
+  }
+  // 차지 중
+  if (chargeT >= 0.25) {
+    const k = Math.min((chargeT - 0.25) / 0.65, 1);
+    ctx.save(); ctx.translate(r.x, bladeY(r) - 6);
+    ctx.strokeStyle = k >= 1 ? C.banner : C.hazard; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(0, 0, 26 + k * 14, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  if (frozen(r)) {
+    ctx.fillStyle = C.hazard; ctx.textAlign = 'center'; ctx.font = '700 22px "Black Han Sans",sans-serif';
+    ctx.fillText('집단 민원 접수 — 낙하 정지', FIELD.W / 2, 320);
+  }
+}
+
+function overlay(title, lines, foot) {
+  ctx.fillStyle = 'rgba(22,51,63,.93)'; ctx.fillRect(0, 0, FIELD.W, FIELD.H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = C.hazard; ctx.font = '700 56px "Black Han Sans", ui-sans-serif, sans-serif';
+  ctx.fillText(title, FIELD.W / 2, 240);
+  ctx.fillStyle = C.dust; ctx.font = '17px ui-sans-serif,sans-serif';
+  lines.forEach((l, i) => ctx.fillText(l, FIELD.W / 2, 300 + i * 30));
+  if (foot) { ctx.fillStyle = 'rgba(207,199,182,.6)'; ctx.font = '14px ui-sans-serif,sans-serif'; ctx.fillText(foot, FIELD.W / 2, 450); }
+}
+
+// 고정 타임스텝 누적기.
+// step()을 프레임당 1회 부르면 144Hz 모니터에서 게임이 2.4배 빨라진다.
+// 시뮬과 동일한 DT로 돌려야 튜닝한 밸런스가 실제 플레이와 일치한다.
+let acc = 0, prev = null;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  // 시계를 섞으면 안 된다. rAF 타임스탬프만 쓴다.
+  // Date.now()(에포크)와 rAF(로드 기준)를 혼용하면 델타가 거대한 음수가 되어 게임이 멈춘다.
+  if (typeof ts !== 'number') return;
+  const real = prev === null ? DT : Math.min((ts - prev) / 1000, 0.25);
+  prev = ts;
+  now += real;
+  if (screen === 'lobby') { acc = 0; return; }
+  if (screen === 'run' && !paused) {
+    acc += real;
+    let guardMax = 8; // 프레임 폭주 방지
+    while (acc >= DT && guardMax-- > 0) {
+      setGuard(run, !!keys.ArrowDown);
+      if (keys.KeyX && (run.cls.style === 'melee' || run.cls.style === 'noise')) chargeT += DT;
+      // Z 홀드 연타 (커맨드는 keydown에서 처리)
+      if (keys.KeyZ && !keys.ArrowUp && !(keys.ArrowDown && airborne(run)) && attack(run, 'light')) { swing = 0.1; slashFx(); }
+      if (swing > 0) swing -= DT;
+      step(run);
+      acc -= DT;
+      emitFx();
+      if (run.over) { finish(); break; }
+    }
+    if (guardMax <= 0) acc = 0;
+    updateFx(real);
+  }
+  ctx.save();
+  if (fx.shake > 0.2) ctx.translate((Math.random() - .5) * fx.shake, (Math.random() - .5) * fx.shake);
+  drawSky();
+  if (run) { drawBuilding(run.building); drawDrops(); drawFlying(); drawPlayer(); }
+  drawGround();
+  drawTopple();
+  drawParticles();
+  drawSpecial();
+  ctx.restore();
+  if (fx.flash) { ctx.fillStyle = fx.flash.col.replace(/[\d.]+\)$/, `${(fx.flash.life * .55).toFixed(2)})`); ctx.fillRect(0, 0, FIELD.W, FIELD.H); }
+  if (run && screen === 'run') { drawSidePanels(); drawHud(); drawOpening(); }
+  if (paused && screen === 'run') overlay('일시정지', ['Space를 눌러 재개'], 'Esc를 누르면 철수합니다');
+  if (screen === 'result') {
+    overlay('작업 중단', [
+      `${String(Math.floor(last.score)).padStart(8, '0')} 점`,
+      `최고 ${last.combo}연타 · 건물 ${last.buildings}채 · ${last.mins.toFixed(1)}분`,
+      `고철 ${last.scrap} 획득`,
+    ], '아무 키나 누르면 사무실로 돌아갑니다');
+  }
+}
+
+renderLobby();
+requestAnimationFrame(frame); // 첫 프레임도 rAF로 받아 타임스탬프를 확보한다
+
+</script></body></html>
